@@ -6,7 +6,7 @@ const itemNameEl = document.getElementById('itemName');
 let lastScannedBarcode = "";
 
 // Your Google Apps Script URL
-const sheetEndpoint = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
+const sheetEndpoint = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA";
 
 // Start barcode scanning
 codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
