@@ -1,7 +1,8 @@
+let currentMode = 'add';
+let lastScannedBarcode = "";
 const codeReader = new ZXing.BrowserBarcodeReader();
 const videoElement = document.getElementById('video');
 const itemNameEl = document.getElementById('itemName');
-let lastScannedBarcode = "";
 
 // Start barcode scanning
 codeReader
@@ -10,7 +11,11 @@ codeReader
       const code = result.getText();
       console.log("Scanned barcode:", code);
       lastScannedBarcode = code;
-      lookupProductName(code);
+      if (currentMode === 'add') {
+        lookupProductName(code);
+      } else {
+        itemNameEl.value = "Ready to remove item";
+      }
     }
   })
   .catch(err => {
@@ -18,7 +23,7 @@ codeReader
     alert("Camera error: Please allow access or try another browser.");
   });
 
-// Look up product name via Open Food Facts, then fallback to UPCItemDB
+// Lookup product name
 function lookupProductName(barcode) {
   fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
     .then(res => res.json())
@@ -27,7 +32,6 @@ function lookupProductName(barcode) {
       if (name) {
         itemNameEl.value = name;
       } else {
-        // Fallback to UPCItemDB
         fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`)
           .then(res => res.json())
           .then(upcData => {
@@ -44,9 +48,15 @@ function lookupProductName(barcode) {
     });
 }
 
-// Submit data to Google Sheet
+// Submit data based on mode
 function submitData() {
+  if (!lastScannedBarcode) {
+    alert("Please scan a barcode first.");
+    return;
+  }
+
   const payload = {
+    mode: currentMode,
     item: document.getElementById('itemName').value,
     barcode: lastScannedBarcode,
     quantity: document.getElementById('quantity').value,
@@ -57,7 +67,7 @@ function submitData() {
     notes: document.getElementById('notes').value
   };
 
-  console.log("Payload to submit:", payload);
+  console.log("Submitting:", payload);
 
   fetch("https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec", {
     method: "POST",
@@ -68,19 +78,10 @@ function submitData() {
     body: JSON.stringify(payload)
   })
   .then(() => {
-    showToast("Item added successfully!");
+    showToast(currentMode === 'add' ? "Item added" : "Item removed");
 
-    // Reset form
-    document.getElementById('itemName').value = "";
-    document.getElementById('quantity').value = "";
-    document.getElementById('unit').value = "";
-    document.getElementById('purchaseDate').value = new Date().toISOString().split("T")[0];
-    document.getElementById('expiryDate').value = "";
-    document.getElementById('location').value = "";
-    document.getElementById('notes').value = "";
+    resetForm();
     lastScannedBarcode = "";
-
-    itemNameEl.focus();
   })
   .catch(err => {
     console.error("Submit error:", err);
@@ -88,7 +89,19 @@ function submitData() {
   });
 }
 
-// Toast popup message
+// Reset form after submission
+function resetForm() {
+  document.getElementById('itemName').value = "";
+  document.getElementById('quantity').value = "";
+  document.getElementById('unit').value = "";
+  document.getElementById('purchaseDate').value = new Date().toISOString().split("T")[0];
+  document.getElementById('expiryDate').value = "";
+  document.getElementById('location').value = "";
+  document.getElementById('notes').value = "";
+  itemNameEl.focus();
+}
+
+// Toast message
 function showToast(message) {
   let toast = document.createElement("div");
   toast.innerText = message;
@@ -109,7 +122,7 @@ function showToast(message) {
   }, 2000);
 }
 
-// Auto-fill today's date when page loads
+// Auto-fill today's date on load
 function setDefaultDate() {
   document.getElementById('purchaseDate').value = new Date().toISOString().split("T")[0];
 }
@@ -117,3 +130,20 @@ function setDefaultDate() {
 window.addEventListener('DOMContentLoaded', () => {
   setDefaultDate();
 });
+
+// Toggle add/remove mode
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeAdd').classList.remove('active');
+  document.getElementById('modeRemove').classList.remove('active');
+
+  if (mode === 'add') {
+    document.getElementById('modeAdd').classList.add('active');
+    showToast("Switched to Add mode");
+  } else {
+    document.getElementById('modeRemove').classList.add('active');
+    showToast("Switched to Remove mode");
+  }
+
+  resetForm();
+}
