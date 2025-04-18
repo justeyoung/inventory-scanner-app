@@ -1,31 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fridge Scanner</title>
-  <script src="https://unpkg.com/@zxing/library@latest"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    video { width: 100%; max-width: 400px; margin-bottom: 10px; }
-    input, button { display: block; margin: 10px 0; width: 100%; padding: 8px; }
-  </style>
 </head>
 <body>
   <h2>Scan Item Barcode</h2>
-  <video id="video"></video>
+  
+  <!-- Camera video feed -->
+  <video id="video" width="300" height="200" style="border: 1px solid black;"></video>
+  
+  <!-- Input fields -->
+  <p><strong>Item Name</strong></p>
+  <input id="itemName" placeholder="Type or scan..." /><br><br>
 
-  <label for="itemName">Item Name</label>
-  <input id="itemName" placeholder="Type or scan..." />
+  <input id="quantity" placeholder="Quantity" /><br><br>
+  <input id="unit" placeholder="Unit (e.g. pcs, g)" /><br><br>
+  <input id="purchaseDate" type="date" /><br><br>
+  <input id="expiryDate" type="date" /><br><br>
+  <input id="location" placeholder="Location (Fridge/Freezer)" /><br><br>
+  <input id="notes" placeholder="Notes" /><br><br>
 
-  <input id="quantity" placeholder="Quantity" />
-  <input id="unit" placeholder="Unit (e.g. pcs, g)" />
-  <input id="purchaseDate" type="date" />
-  <input id="expiryDate" type="date" />
-  <input id="location" placeholder="Location (Fridge/Freezer)" />
-  <input id="notes" placeholder="Notes" />
+  <!-- Submit button -->
   <button onclick="submitData()">Add to Inventory</button>
 
+  <!-- Libraries -->
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
   <script src="app.js"></script>
 </body>
 </html>
