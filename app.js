@@ -12,6 +12,7 @@ const sheetEndpoint = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTl
 codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
   if (result) {
     const code = result.getText();
+    console.log("Scanned barcode:", code); // DEBUG
     lastScannedBarcode = code;
     fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`)
       .then(res => res.json())
@@ -38,6 +39,8 @@ function submitData() {
     notes: document.getElementById('notes').value
   };
 
+  console.log("Payload to submit:", payload); // DEBUG
+
   fetch(sheetEndpoint, {
     method: "POST",
     mode: "no-cors",
@@ -48,7 +51,7 @@ function submitData() {
   })
   .then(() => {
     alert("Item submitted!");
-    lastScannedBarcode = ""; // Reset barcode after submission
+    lastScannedBarcode = "";
   })
   .catch(err => {
     console.error("Error sending request:", err);
