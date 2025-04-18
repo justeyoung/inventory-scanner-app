@@ -11,18 +11,17 @@ codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
       .then(res => res.json())
       .then(data => {
         const title = data.items?.[0]?.title || "Unknown item";
-        itemNameEl.textContent = title;
-        itemNameEl.dataset.value = title;
+        itemNameEl.value = title;  // Fill the input field
       })
       .catch(() => {
-        itemNameEl.textContent = "Failed to lookup item";
+        itemNameEl.value = "Failed to lookup item";
       });
   }
 });
 
 function submitData() {
   const payload = {
-    item: itemNameEl.dataset.value || '',
+    item: document.getElementById('itemName').value,
     quantity: document.getElementById('quantity').value,
     unit: document.getElementById('unit').value,
     purchaseDate: document.getElementById('purchaseDate').value,
