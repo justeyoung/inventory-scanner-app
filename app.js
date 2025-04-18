@@ -5,14 +5,14 @@ const itemNameEl = document.getElementById('itemName');
 // Store last scanned barcode
 let lastScannedBarcode = "";
 
-// Your Google Apps Script URL
-const sheetEndpoint = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA";
+// Google Apps Script Web App URL
+const sheetEndpoint = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
 // Start barcode scanning
 codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
   if (result) {
     const code = result.getText();
-    lastScannedBarcode = code; // Save for later
+    lastScannedBarcode = code;
     fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`)
       .then(res => res.json())
       .then(data => {
@@ -40,26 +40,18 @@ function submitData() {
 
   fetch(sheetEndpoint, {
     method: "POST",
-    body: JSON.stringify(payload),
-    headers: { "Content-Type": "application/json" }
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
   })
-  .then(response => {
-    if (!response.ok) throw new Error("Network response was not ok");
-    return response.json();
+  .then(() => {
+    alert("Item submitted!");
+    lastScannedBarcode = ""; // Reset barcode after submission
   })
-  .then(data => {
-    alert("Item added with ID #" + data.id);
-    lastScannedBarcode = ""; // Reset
-  })
-  .catch(async (err) => {
-    let errorMessage = "Unknown error";
-    try {
-      const text = await err?.response?.text?.();
-      errorMessage = text || err.message;
-    } catch (e) {
-      errorMessage = err.message;
-    }
-    console.error("Submission error:", err);
-    alert("Failed to add item.\n\n" + errorMessage);
+  .catch(err => {
+    console.error("Error sending request:", err);
+    alert("Failed to add item. (Fetch error)");
   });
 }
