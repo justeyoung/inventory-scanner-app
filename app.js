@@ -18,7 +18,7 @@ codeReader
     alert("Camera error: Please allow access or try another browser.");
   });
 
-// Try Open Food Facts first, then fallback to UPCItemDB
+// Look up product name via Open Food Facts, then fallback to UPCItemDB
 function lookupProductName(barcode) {
   fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
     .then(res => res.json())
@@ -27,7 +27,7 @@ function lookupProductName(barcode) {
       if (name) {
         itemNameEl.value = name;
       } else {
-        // Fallback to UPCItemDB if not found
+        // Fallback to UPCItemDB
         fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`)
           .then(res => res.json())
           .then(upcData => {
@@ -44,6 +44,7 @@ function lookupProductName(barcode) {
     });
 }
 
+// Submit data to Google Sheet
 function submitData() {
   const payload = {
     item: document.getElementById('itemName').value,
@@ -87,7 +88,7 @@ function submitData() {
   });
 }
 
-// Toast message
+// Toast popup message
 function showToast(message) {
   let toast = document.createElement("div");
   toast.innerText = message;
@@ -107,3 +108,12 @@ function showToast(message) {
     toast.remove();
   }, 2000);
 }
+
+// Auto-fill today's date when page loads
+function setDefaultDate() {
+  document.getElementById('purchaseDate').value = new Date().toISOString().split("T")[0];
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  setDefaultDate();
+});
