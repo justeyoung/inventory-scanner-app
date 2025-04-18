@@ -11,11 +11,8 @@ codeReader
       const code = result.getText();
       console.log("Scanned barcode:", code);
       lastScannedBarcode = code;
-      if (currentMode === 'add') {
-        lookupProductName(code);
-      } else {
-        itemNameEl.value = "Ready to remove item";
-      }
+
+      lookupProductName(code); // lookup in both modes
     }
   })
   .catch(err => {
@@ -36,15 +33,15 @@ function lookupProductName(barcode) {
           .then(res => res.json())
           .then(upcData => {
             const fallbackName = upcData?.items?.[0]?.title;
-            itemNameEl.value = fallbackName || "Failed to lookup item";
+            itemNameEl.value = fallbackName || "Unknown item";
           })
           .catch(() => {
-            itemNameEl.value = "Failed to lookup item";
+            itemNameEl.value = "Unknown item";
           });
       }
     })
     .catch(() => {
-      itemNameEl.value = "Failed to lookup item";
+      itemNameEl.value = "Unknown item";
     });
 }
 
@@ -122,7 +119,7 @@ function showToast(message) {
   }, 2000);
 }
 
-// Auto-fill today's date on load
+// Auto-fill today's date
 function setDefaultDate() {
   document.getElementById('purchaseDate').value = new Date().toISOString().split("T")[0];
 }
@@ -131,7 +128,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setDefaultDate();
 });
 
-// Toggle add/remove mode
+// Toggle between add/remove mode
 function setMode(mode) {
   currentMode = mode;
   document.getElementById('modeAdd').classList.remove('active');
