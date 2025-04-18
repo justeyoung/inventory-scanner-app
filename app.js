@@ -1,60 +1,37 @@
-const codeReader = new ZXing.BrowserBarcodeReader();
-const videoElement = document.getElementById('video');
-const itemNameEl = document.getElementById('itemName');
+function doPost(e) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Inventory');
+    const data = JSON.parse(e.postData.contents);
 
-// Store last scanned barcode
-let lastScannedBarcode = "";
+    const lastRow = sheet.getLastRow();
+    let nextId = 1;
+    if (lastRow > 1) {
+      const lastId = sheet.getRange(lastRow, 1).getValue();
+      nextId = parseInt(lastId) + 1;
+    }
 
-// Google Apps Script Web App URL
-const sheetEndpoint = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
+    const barcode = data.barcode ? String(data.barcode).padStart(8, "0") : "";
 
-// Start barcode scanning
-codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-  if (result) {
-    const code = result.getText();
-    console.log("Scanned barcode:", code); // DEBUG
-    lastScannedBarcode = code;
-    fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`)
-      .then(res => res.json())
-      .then(data => {
-        const title = data.items?.[0]?.title || "Unknown item";
-        itemNameEl.value = title;
-      })
-      .catch(() => {
-        itemNameEl.value = "Failed to lookup item";
-      });
+    const newRow = [
+      nextId,
+      data.item || "",
+      barcode,
+      data.quantity || "",
+      data.unit || "",
+      data.purchaseDate || "",
+      data.expiryDate || "",
+      data.location || "",
+      data.notes || ""
+    ];
+
+    sheet.appendRow(newRow);
+
+    return ContentService
+      .createTextOutput("Success")
+      .setMimeType(ContentService.MimeType.TEXT);
+  } catch (error) {
+    return ContentService
+      .createTextOutput("Error: " + error.message)
+      .setMimeType(ContentService.MimeType.TEXT);
   }
-});
-
-// Submit data to Google Sheet
-function submitData() {
-  const payload = {
-    item: document.getElementById('itemName').value,
-    barcode: lastScannedBarcode,
-    quantity: document.getElementById('quantity').value,
-    unit: document.getElementById('unit').value,
-    purchaseDate: document.getElementById('purchaseDate').value,
-    expiryDate: document.getElementById('expiryDate').value,
-    location: document.getElementById('location').value,
-    notes: document.getElementById('notes').value
-  };
-
-  console.log("Payload to submit:", payload); // DEBUG
-
-  fetch(sheetEndpoint, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  })
-  .then(() => {
-    alert("Item submitted!");
-    lastScannedBarcode = "";
-  })
-  .catch(err => {
-    console.error("Error sending request:", err);
-    alert("Failed to add item. (Fetch error)");
-  });
 }
