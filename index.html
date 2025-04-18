@@ -1,31 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fridge Scanner</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fridge Inventory Scanner</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+
+    .mode-toggle {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+
+    .mode-toggle button {
+      flex: 1;
+      padding: 10px;
+      margin: 0 5px;
+      font-weight: bold;
+      border: 2px solid #4CAF50;
+      background-color: #fff;
+      color: #4CAF50;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .mode-toggle button.active {
+      background-color: #4CAF50;
+      color: #fff;
+    }
+
+    video {
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Scan Item Barcode</h2>
-  
-  <!-- Camera video feed -->
-  <video id="video" width="300" height="200" style="border: 1px solid black;"></video>
-  
-  <!-- Input fields -->
-  <p><strong>Item Name</strong></p>
-  <input id="itemName" placeholder="Type or scan..." /><br><br>
 
-  <input id="quantity" placeholder="Quantity" /><br><br>
-  <input id="unit" placeholder="Unit (e.g. pcs, g)" /><br><br>
-  <input id="purchaseDate" type="date" /><br><br>
-  <input id="expiryDate" type="date" /><br><br>
-  <input id="location" placeholder="Location (Fridge/Freezer)" /><br><br>
-  <input id="notes" placeholder="Notes" /><br><br>
+  <h2>Fridge Inventory</h2>
 
-  <!-- Submit button -->
-  <button onclick="submitData()">Add to Inventory</button>
+  <!-- Mode Toggle -->
+  <div class="mode-toggle">
+    <button id="modeAdd" class="active" onclick="setMode('add')">Add</button>
+    <button id="modeRemove" onclick="setMode('remove')">Remove</button>
+  </div>
 
-  <!-- Libraries -->
+  <!-- Camera feed -->
+  <video id="video"></video>
+
+  <!-- Item Form -->
+  <input id="itemName" placeholder="Item name" />
+  <input id="quantity" placeholder="Quantity" />
+  <input id="unit" placeholder="Unit (e.g. pcs, g)" />
+  <input id="purchaseDate" type="date" />
+  <input id="expiryDate" type="date" />
+  <input id="location" placeholder="Location (Fridge/Freezer)" />
+  <input id="notes" placeholder="Notes" />
+  <button onclick="submitData()">Submit</button>
+
+  <!-- Scripts -->
   <script src="https://unpkg.com/@zxing/library@latest"></script>
   <script src="app.js"></script>
 </body>
