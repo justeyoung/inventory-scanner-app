@@ -1,7 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Inventory Item</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    h2 {
+      margin-bottom: 1.5rem;
+    }
+
+    form label {
+      display: block;
+      margin-top: 1rem;
+    }
+
+    form input, form select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 1.5rem;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
 <body>
   <h2>Add Inventory Item</h2>
 
-  <form id="addForm">
+  <form onsubmit="submitForm(event)">
     <label>Item Name
       <input type="text" id="item" required />
     </label>
@@ -39,11 +78,13 @@
       <input type="text" id="notes" />
     </label>
 
-    <button type="button" onclick="submitForm()">Submit</button>
+    <button type="submit">Submit</button>
   </form>
 
   <script>
-    async function submitForm() {
+    async function submitForm(event) {
+      event.preventDefault();
+
       const payload = {
         mode: 'add',
         item: document.getElementById('item').value.trim(),
@@ -68,7 +109,7 @@
         const result = await res.json();
         if (result.success) {
           alert('Item added successfully!');
-          document.getElementById('addForm').reset(); // Now this works!
+          event.target.reset(); // Clear the form
         } else {
           alert('Error: ' + result.error);
         }
@@ -78,3 +119,4 @@
     }
   </script>
 </body>
+</html>
