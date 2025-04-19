@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Inventory Viewer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -53,13 +54,19 @@
       font-weight: bold;
     }
 
-    #searchBox, #expiryFilter {
+    #searchBox, #expiryFilter, #downloadBtn {
       margin: 10px 0 20px;
       padding: 8px;
       font-size: 16px;
       border: 2px solid #ccc;
       border-radius: 4px;
       width: 100%;
+    }
+
+    #downloadBtn {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
     }
 
     .hidden {
@@ -87,6 +94,7 @@
     <option value="expired">Expired only</option>
     <option value="soon">Expiring within 3 days</option>
   </select>
+  <button id="downloadBtn">Download PDFs (1 per location)</button>
 
   <div id="groupedTables"></div>
 
@@ -177,6 +185,7 @@
 
           table.appendChild(tbody);
           section.appendChild(table);
+          section.setAttribute("data-location", location.replace(/\s+/g, "_"));
           container.appendChild(section);
         });
       })
@@ -213,6 +222,25 @@
 
     document.getElementById("searchBox").addEventListener("input", applyFilters);
     document.getElementById("expiryFilter").addEventListener("change", applyFilters);
+
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      allSections.forEach(section => {
+        if (section.style.display === "none") return;
+
+        const location = section.getAttribute("data-location");
+        const clone = section.cloneNode(true);
+
+        const opt = {
+          margin: 0.5,
+          filename: `${location}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(clone).save();
+      });
+    });
   </script>
 </body>
 </html>
