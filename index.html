@@ -46,7 +46,7 @@
       display: block;
     }
 
-    input, button {
+    input, select, button {
       width: 100%;
       padding: 8px;
       margin-bottom: 12px;
@@ -93,7 +93,15 @@
     </div>
   </div>
 
-  <input id="location" placeholder="Location (Fridge/Freezer)" />
+  <!-- Location Dropdown -->
+  <label for="location">Location</label>
+  <select id="location">
+    <option value="Freezer (garage)">Freezer (garage)</option>
+    <option value="Freezer (dining room)">Freezer (dining room)</option>
+    <option value="Fridge (dining room)">Fridge (dining room)</option>
+    <option value="Fridge (kitchen)">Fridge (kitchen)</option>
+  </select>
+
   <input id="notes" placeholder="Notes" />
   <button onclick="submitData()">Submit</button>
 
