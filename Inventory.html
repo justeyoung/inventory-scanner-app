@@ -29,7 +29,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 14px;
-      margin-bottom: 30px;
+      margin-bottom: 10px;
     }
 
     th, td {
@@ -54,7 +54,7 @@
       font-weight: bold;
     }
 
-    #searchBox, #expiryFilter, #downloadBtn {
+    #searchBox, #expiryFilter {
       margin: 10px 0 20px;
       padding: 8px;
       font-size: 16px;
@@ -63,10 +63,15 @@
       width: 100%;
     }
 
-    #downloadBtn {
+    .download-btn {
       background-color: #4CAF50;
       color: white;
+      border: none;
+      padding: 8px 12px;
+      font-size: 14px;
+      margin-bottom: 30px;
       cursor: pointer;
+      border-radius: 4px;
     }
 
     .hidden {
@@ -94,7 +99,6 @@
     <option value="expired">Expired only</option>
     <option value="soon">Expiring within 3 days</option>
   </select>
-  <button id="downloadBtn">Download PDFs (1 per location)</button>
 
   <div id="groupedTables"></div>
 
@@ -185,7 +189,24 @@
 
           table.appendChild(tbody);
           section.appendChild(table);
-          section.setAttribute("data-location", location.replace(/\s+/g, "_"));
+
+          const downloadBtn = document.createElement("button");
+          downloadBtn.className = "download-btn";
+          downloadBtn.textContent = `Download PDF: ${location}`;
+          downloadBtn.addEventListener("click", () => {
+            const clone = section.cloneNode(true);
+            clone.querySelector("button").remove(); // Remove button from PDF
+
+            html2pdf().set({
+              margin: 0.5,
+              filename: `${location.replace(/\s+/g, "_")}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2 },
+              jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            }).from(clone).save();
+          });
+
+          section.appendChild(downloadBtn);
           container.appendChild(section);
         });
       })
@@ -222,25 +243,6 @@
 
     document.getElementById("searchBox").addEventListener("input", applyFilters);
     document.getElementById("expiryFilter").addEventListener("change", applyFilters);
-
-    document.getElementById("downloadBtn").addEventListener("click", () => {
-      allSections.forEach(section => {
-        if (section.style.display === "none") return;
-
-        const location = section.getAttribute("data-location");
-        const clone = section.cloneNode(true);
-
-        const opt = {
-          margin: 0.5,
-          filename: `${location}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(clone).save();
-      });
-    });
   </script>
 </body>
 </html>
