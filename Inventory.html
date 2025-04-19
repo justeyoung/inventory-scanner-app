@@ -55,7 +55,7 @@
     }
 
     #searchBox, #expiryFilter {
-      margin: 10px 0 20px;
+      margin: 10px 0 15px;
       padding: 8px;
       font-size: 16px;
       border: 2px solid #ccc;
@@ -63,15 +63,16 @@
       width: 100%;
     }
 
-    .download-btn {
+    .download-all-btn {
       background-color: #4CAF50;
       color: white;
       border: none;
-      padding: 8px 12px;
-      font-size: 14px;
-      margin-bottom: 30px;
+      padding: 10px 16px;
+      font-size: 16px;
+      margin: 15px 0 25px;
       cursor: pointer;
       border-radius: 4px;
+      width: 100%;
     }
 
     .hidden {
@@ -99,6 +100,8 @@
     <option value="expired">Expired only</option>
     <option value="soon">Expiring within 3 days</option>
   </select>
+
+  <button class="download-all-btn" id="downloadAllBtn">Download All as PDF</button>
 
   <div id="groupedTables"></div>
 
@@ -189,45 +192,6 @@
 
           table.appendChild(tbody);
           section.appendChild(table);
-
-          const downloadBtn = document.createElement("button");
-          downloadBtn.className = "download-btn";
-          downloadBtn.textContent = `Download PDF: ${location}`;
-          downloadBtn.addEventListener("click", () => {
-            const visibleRows = table.querySelectorAll("tbody tr:not(.hidden)");
-
-            if (visibleRows.length === 0) {
-              alert("No visible rows to export.");
-              return;
-            }
-
-            const pdfWrapper = document.createElement("div");
-
-            const pdfTitle = document.createElement("h3");
-            pdfTitle.textContent = location;
-            pdfWrapper.appendChild(pdfTitle);
-
-            const exportTable = document.createElement("table");
-            exportTable.innerHTML = table.querySelector("thead").outerHTML;
-            const exportTbody = document.createElement("tbody");
-
-            visibleRows.forEach(row => {
-              exportTbody.appendChild(row.cloneNode(true));
-            });
-
-            exportTable.appendChild(exportTbody);
-            pdfWrapper.appendChild(exportTable);
-
-            html2pdf().set({
-              margin: 0.5,
-              filename: `${location.replace(/\s+/g, "_")}.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { scale: 2 },
-              jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).from(pdfWrapper).save();
-          });
-
-          section.appendChild(downloadBtn);
           container.appendChild(section);
         });
       })
@@ -264,6 +228,36 @@
 
     document.getElementById("searchBox").addEventListener("input", applyFilters);
     document.getElementById("expiryFilter").addEventListener("change", applyFilters);
+
+    document.getElementById("downloadAllBtn").addEventListener("click", () => {
+      const wrapper = document.createElement("div");
+
+      allSections.forEach(section => {
+        if (section.style.display === "none") return;
+
+        const heading = section.querySelector("h3");
+        const table = section.querySelector("table");
+
+        const title = document.createElement("h3");
+        title.textContent = heading.textContent;
+        wrapper.appendChild(title);
+
+        const tableClone = table.cloneNode(true);
+        tableClone.querySelectorAll("tbody tr.hidden").forEach(row => row.remove());
+
+        if (tableClone.querySelectorAll("tbody tr").length > 0) {
+          wrapper.appendChild(tableClone);
+        }
+      });
+
+      html2pdf().set({
+        margin: 0.5,
+        filename: `Inventory_All_Locations.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      }).from(wrapper).save();
+    });
   </script>
 </body>
 </html>
