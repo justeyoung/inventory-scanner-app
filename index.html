@@ -51,6 +51,16 @@
       padding: 8px;
       margin-bottom: 12px;
     }
+
+    .date-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .date-row .date-group {
+      flex: 1;
+    }
   </style>
 </head>
 <body>
@@ -71,11 +81,17 @@
   <input id="quantity" placeholder="Quantity" />
   <input id="unit" placeholder="Unit (e.g. pcs, g)" />
 
-  <label for="purchaseDate">Purchase Date</label>
-  <input id="purchaseDate" type="date" />
-
-  <label for="expiryDate">Expiry Date</label>
-  <input id="expiryDate" type="date" />
+  <!-- Dates Row -->
+  <div class="date-row">
+    <div class="date-group">
+      <label for="purchaseDate">Purchase Date</label>
+      <input id="purchaseDate" type="date" />
+    </div>
+    <div class="date-group">
+      <label for="expiryDate">Expiry Date</label>
+      <input id="expiryDate" type="date" />
+    </div>
+  </div>
 
   <input id="location" placeholder="Location (Fridge/Freezer)" />
   <input id="notes" placeholder="Notes" />
