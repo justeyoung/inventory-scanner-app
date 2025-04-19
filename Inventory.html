@@ -54,7 +54,7 @@
       font-weight: bold;
     }
 
-    #searchBox, #expiryFilter {
+    select, input[type="text"], button {
       margin: 10px 0 15px;
       padding: 8px;
       font-size: 16px;
@@ -63,16 +63,10 @@
       width: 100%;
     }
 
-    .download-all-btn {
+    .download-selected-btn {
       background-color: #4CAF50;
       color: white;
-      border: none;
-      padding: 10px 16px;
-      font-size: 16px;
-      margin: 15px 0 25px;
       cursor: pointer;
-      border-radius: 4px;
-      width: 100%;
     }
 
     .hidden {
@@ -101,7 +95,11 @@
     <option value="soon">Expiring within 3 days</option>
   </select>
 
-  <button class="download-all-btn" id="downloadAllBtn">Download All as PDF</button>
+  <select id="locationSelect">
+    <option value="all">Select a location</option>
+  </select>
+
+  <button class="download-selected-btn" id="downloadSelectedBtn">Download PDF for Selected Location</button>
 
   <div id="groupedTables"></div>
 
@@ -128,6 +126,7 @@
     }
 
     let allSections = [];
+    let sectionMap = {};
 
     fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec')
       .then(response => response.json())
@@ -139,12 +138,19 @@
           grouped[location].push(row);
         });
 
+        const locationSelect = document.getElementById("locationSelect");
         const container = document.getElementById("groupedTables");
         container.innerHTML = "";
 
         Object.keys(grouped).sort().forEach(location => {
           const section = document.createElement("div");
+          sectionMap[location] = section;
           allSections.push(section);
+
+          const option = document.createElement("option");
+          option.value = location;
+          option.textContent = location;
+          locationSelect.appendChild(option);
 
           const heading = document.createElement("h3");
           heading.textContent = location;
@@ -229,34 +235,46 @@
     document.getElementById("searchBox").addEventListener("input", applyFilters);
     document.getElementById("expiryFilter").addEventListener("change", applyFilters);
 
-    document.getElementById("downloadAllBtn").addEventListener("click", () => {
-      const wrapper = document.createElement("div");
+    document.getElementById("downloadSelectedBtn").addEventListener("click", () => {
+      const selectedLocation = document.getElementById("locationSelect").value;
+      if (!selectedLocation || selectedLocation === "all") {
+        alert("Please select a location first.");
+        return;
+      }
 
-      allSections.forEach(section => {
-        if (section.style.display === "none") return;
+      const section = sectionMap[selectedLocation];
+      const table = section.querySelector("table");
+      const heading = section.querySelector("h3");
 
-        const heading = section.querySelector("h3");
-        const table = section.querySelector("table");
+      const visibleRows = table.querySelectorAll("tbody tr:not(.hidden)");
+      if (visibleRows.length === 0) {
+        alert("No visible rows to export for this location.");
+        return;
+      }
 
-        const title = document.createElement("h3");
-        title.textContent = heading.textContent;
-        wrapper.appendChild(title);
+      const pdfWrapper = document.createElement("div");
+      const pdfTitle = document.createElement("h3");
+      pdfTitle.textContent = selectedLocation;
+      pdfWrapper.appendChild(pdfTitle);
 
-        const tableClone = table.cloneNode(true);
-        tableClone.querySelectorAll("tbody tr.hidden").forEach(row => row.remove());
+      const exportTable = document.createElement("table");
+      exportTable.innerHTML = table.querySelector("thead").outerHTML;
+      const exportTbody = document.createElement("tbody");
 
-        if (tableClone.querySelectorAll("tbody tr").length > 0) {
-          wrapper.appendChild(tableClone);
-        }
+      visibleRows.forEach(row => {
+        exportTbody.appendChild(row.cloneNode(true));
       });
+
+      exportTable.appendChild(exportTbody);
+      pdfWrapper.appendChild(exportTable);
 
       html2pdf().set({
         margin: 0.5,
-        filename: `Inventory_All_Locations.pdf`,
+        filename: `${selectedLocation.replace(/\s+/g, "_")}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      }).from(wrapper).save();
+      }).from(pdfWrapper).save();
     });
   </script>
 </body>
