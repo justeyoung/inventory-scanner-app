@@ -12,9 +12,6 @@
     h2 {
       margin-bottom: 10px;
     }
-    .location-group {
-      margin-bottom: 40px;
-    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -22,93 +19,156 @@
     }
     th, td {
       border: 1px solid #ddd;
-      padding: 8px;
+      padding: 6px;
     }
     th {
       background-color: #f2f2f2;
     }
     td[contenteditable="true"] {
       background-color: #fff7cc;
-      cursor: text;
     }
     .updated {
       background-color: #d4edda !important;
+    }
+    .location-group {
+      margin-bottom: 40px;
+    }
+    .filter-controls {
+      margin-bottom: 20px;
+    }
+    .filter-controls input,
+    .filter-controls select,
+    .filter-controls button {
+      padding: 6px;
+      margin-right: 10px;
+    }
+    .location-heading {
+      color: green;
     }
   </style>
 </head>
 <body>
   <a href="index.html" style="color: green;">&larr; Back to Scanner</a>
   <h2>Inventory Viewer</h2>
+
+  <div class="filter-controls">
+    <input id="searchInput" type="text" placeholder="Search items, units, or notes..." oninput="renderTable()" />
+    <select id="locationFilter" onchange="renderTable()">
+      <option value="">All Locations</option>
+      <option value="Freezer (garage)">Freezer (garage)</option>
+      <option value="Freezer (dining room)">Freezer (dining room)</option>
+      <option value="Fridge (dining room)">Fridge (dining room)</option>
+      <option value="Fridge (kitchen)">Fridge (kitchen)</option>
+      <option value="Unspecified">Unspecified</option>
+    </select>
+    <button onclick="clearFilters()">Show all</button>
+  </div>
+
   <div id="inventoryContainer"></div>
 
   <script>
     const SHEET_URL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
+    let inventoryData = [];
+
+    function formatShortDate(dateString) {
+      if (!dateString) return '';
+      const d = new Date(dateString);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = String(d.getFullYear()).slice(-2);
+      return `${day}/${month}/${year}`;
+    }
 
     async function loadInventory() {
-      const response = await fetch(SHEET_URL);
-      const data = await response.json();
+      const res = await fetch(SHEET_URL);
+      const data = await res.json();
+      inventoryData = data.slice(1).map((row, index) => ({
+        rowIndex: index + 2,
+        item: row[1],
+        barcode: row[2],
+        qty: row[3],
+        unit: row[4],
+        purchaseDate: row[5],
+        expiryDate: row[6],
+        location: row[7] || 'Unspecified',
+        notes: row[8]
+      }));
+      renderTable();
+    }
 
-      const headers = data[0];
-      const rows = data.slice(1);
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('locationFilter').value = '';
+      renderTable();
+    }
 
-      // Group by location
-      const locationGroups = {};
-      rows.forEach((row, index) => {
-        const location = row[7] || 'Unspecified';
-        if (!locationGroups[location]) locationGroups[location] = [];
-        locationGroups[location].push({ rowIndex: index + 2, row }); // +2 for headers
-      });
-
+    function renderTable() {
       const container = document.getElementById('inventoryContainer');
       container.innerHTML = '';
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const locationFilter = document.getElementById('locationFilter').value;
 
-      Object.keys(locationGroups).forEach(location => {
-        const section = document.createElement('div');
-        section.className = 'location-group';
-        section.innerHTML = `<h3 style="color: green;">${location}</h3>`;
+      const filtered = inventoryData.filter(item =>
+        (!locationFilter || item.location === locationFilter) &&
+        (
+          item.item?.toLowerCase().includes(searchTerm) ||
+          item.unit?.toLowerCase().includes(searchTerm) ||
+          item.notes?.toLowerCase().includes(searchTerm)
+        )
+      );
+
+      const grouped = {};
+      filtered.forEach(entry => {
+        if (!grouped[entry.location]) grouped[entry.location] = [];
+        grouped[entry.location].push(entry);
+      });
+
+      Object.entries(grouped).forEach(([location, entries]) => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'location-group';
+
+        const heading = document.createElement('h3');
+        heading.className = 'location-heading';
+        heading.textContent = location;
+        groupDiv.appendChild(heading);
 
         const table = document.createElement('table');
         const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-
-        ['#', 'Item', 'Qty', 'Unit', 'Purchase Date', 'Expiry Date', 'Notes'].forEach(h => {
+        const headRow = document.createElement('tr');
+        ['#', 'Item', 'Qty', 'Unit', 'Purchase Date', 'Expiry Date', 'Notes'].forEach(header => {
           const th = document.createElement('th');
-          th.textContent = h;
-          headerRow.appendChild(th);
+          th.textContent = header;
+          headRow.appendChild(th);
         });
-        thead.appendChild(headerRow);
+        thead.appendChild(headRow);
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
-
-        locationGroups[location].forEach((entry, idx) => {
+        entries.forEach((entry, i) => {
           const tr = document.createElement('tr');
-          const row = entry.row;
 
-          // Serial #
-          tr.appendChild(createCell(idx + 1, false));
+          tr.appendChild(cell(i + 1, false)); // serial number
 
-          // Editable fields
-          const editableFields = [
-            { index: 1, name: 'Item' },
-            { index: 3, name: 'Quantity' },
-            { index: 4, name: 'Unit' },
-            { index: 5, name: 'Purchase Date' },
-            { index: 6, name: 'Expiry Date' },
-            { index: 8, name: 'Notes' }
-          ];
-
-          editableFields.forEach(field => {
-            const td = createCell(row[field.index], true);
-            td.dataset.rowIndex = entry.rowIndex;
-            td.dataset.columnName = field.name;
-            td.addEventListener('blur', () => updateCell(td));
-            td.addEventListener('keypress', (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                td.blur();
-              }
-            });
+          [
+            ['item', true],
+            ['qty', true],
+            ['unit', true],
+            ['purchaseDate', true],
+            ['expiryDate', true],
+            ['notes', true]
+          ].forEach(([key, editable]) => {
+            const td = cell(key === 'purchaseDate' ? formatShortDate(entry[key]) : entry[key], editable);
+            if (editable) {
+              td.dataset.rowIndex = entry.rowIndex;
+              td.dataset.columnName = key;
+              td.addEventListener('blur', () => updateCell(td));
+              td.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  td.blur();
+                }
+              });
+            }
             tr.appendChild(td);
           });
 
@@ -116,15 +176,15 @@
         });
 
         table.appendChild(tbody);
-        section.appendChild(table);
-        container.appendChild(section);
+        groupDiv.appendChild(table);
+        container.appendChild(groupDiv);
       });
     }
 
-    function createCell(value, editable) {
+    function cell(value, editable) {
       const td = document.createElement('td');
-      td.textContent = value ?? '';
-      if (editable) td.setAttribute('contenteditable', 'true');
+      td.textContent = value || '';
+      if (editable) td.contentEditable = true;
       return td;
     }
 
@@ -135,19 +195,19 @@
 
       const res = await fetch(SHEET_URL, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'update',
           rowIndex: parseInt(rowIndex),
           columnName,
           newValue
-        }),
-        headers: { 'Content-Type': 'application/json' }
+        })
       });
 
       const result = await res.json();
       if (result.success) {
         td.classList.add('updated');
-        setTimeout(() => td.classList.remove('updated'), 1000);
+        setTimeout(() => td.classList.remove('updated'), 800);
       } else {
         alert("Update failed: " + result.error);
       }
