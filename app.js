@@ -56,18 +56,26 @@ itemNameEl.addEventListener("input", () => {
   }
 });
 
-// Submit data
+// Submit data (with confirmation for Remove)
 function submitData() {
-  if (!lastScannedBarcode && document.getElementById('itemName').value.trim() === "") {
+  const itemName = document.getElementById('itemName').value.trim();
+  const quantity = document.getElementById('quantity').value.trim();
+
+  if (!lastScannedBarcode && itemName === "") {
     alert("Please scan a barcode or enter an item name.");
     return;
   }
 
+  if (currentMode === 'remove') {
+    const confirmMsg = `Are you sure you want to remove ${quantity || 1} × ${itemName || 'this item'}?`;
+    if (!confirm(confirmMsg)) return;
+  }
+
   const payload = {
     mode: currentMode,
-    item: document.getElementById('itemName').value,
+    item: itemName,
     barcode: lastScannedBarcode,
-    quantity: document.getElementById('quantity').value,
+    quantity: quantity,
     unit: document.getElementById('unit').value,
     purchaseDate: document.getElementById('purchaseDate').value,
     expiryDate: document.getElementById('expiryDate').value,
@@ -87,7 +95,6 @@ function submitData() {
   })
   .then(() => {
     showToast(currentMode === 'add' ? "Item added" : "Item removed");
-
     resetForm();
     lastScannedBarcode = "";
   })
@@ -140,7 +147,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setDefaultDate();
 });
 
-// Toggle mode
+// Toggle between add/remove mode
 function setMode(mode) {
   currentMode = mode;
   document.getElementById('modeAdd').classList.remove('active');
