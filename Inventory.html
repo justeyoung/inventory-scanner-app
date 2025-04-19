@@ -13,13 +13,22 @@
     }
 
     h2 {
-      margin-bottom: 20px;
+      margin-bottom: 10px;
+    }
+
+    h3 {
+      margin-top: 30px;
+      margin-bottom: 10px;
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 4px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 14px;
+      margin-bottom: 30px;
     }
 
     th, td {
@@ -49,22 +58,7 @@
 
   <a href="index.html" class="back-link">← Back to Scanner</a>
   <h2>Inventory Viewer</h2>
-
-  <table id="inventoryTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Item</th>
-        <th>Qty</th>
-        <th>Unit</th>
-        <th>Purchase Date</th>
-        <th>Expiry Date</th>
-        <th>Location</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="groupedTables"></div>
 
   <script>
     function formatDate(dateStr) {
@@ -80,20 +74,52 @@
     fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec')
       .then(response => response.json())
       .then(data => {
-        const tbody = document.querySelector("#inventoryTable tbody");
+        const grouped = {};
+
+        // Skip header row
         data.slice(1).forEach(row => {
-          const tr = document.createElement("tr");
+          const location = row[7] || "Unspecified";
+          if (!grouped[location]) grouped[location] = [];
+          grouped[location].push(row);
+        });
 
-          // Indices: 0=ID, 1=Item, 3=Qty, 4=Unit, 5=Purchase Date, 6=Expiry Date, 7=Location, 8=Notes
-          const indicesToShow = [0, 1, 3, 4, 5, 6, 7, 8];
+        const container = document.getElementById("groupedTables");
 
-          indicesToShow.forEach(i => {
-            const td = document.createElement("td");
-            td.textContent = (i === 5 || i === 6) ? formatDate(row[i]) : row[i];
-            tr.appendChild(td);
+        Object.keys(grouped).sort().forEach(location => {
+          const section = document.createElement("div");
+
+          const heading = document.createElement("h3");
+          heading.textContent = location;
+          section.appendChild(heading);
+
+          const table = document.createElement("table");
+          const thead = document.createElement("thead");
+          const headRow = document.createElement("tr");
+          ["ID", "Item", "Qty", "Unit", "Purchase Date", "Expiry Date", "Notes"].forEach(text => {
+            const th = document.createElement("th");
+            th.textContent = text;
+            headRow.appendChild(th);
+          });
+          thead.appendChild(headRow);
+          table.appendChild(thead);
+
+          const tbody = document.createElement("tbody");
+          grouped[location].forEach(row => {
+            const tr = document.createElement("tr");
+
+            const indices = [0, 1, 3, 4, 5, 6, 8]; // omit barcode and location
+            indices.forEach(i => {
+              const td = document.createElement("td");
+              td.textContent = (i === 5 || i === 6) ? formatDate(row[i]) : row[i];
+              tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
           });
 
-          tbody.appendChild(tr);
+          table.appendChild(tbody);
+          section.appendChild(table);
+          container.appendChild(section);
         });
       })
       .catch(error => {
