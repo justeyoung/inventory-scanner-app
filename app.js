@@ -1,166 +1,107 @@
-let currentMode = 'add';
-let lastScannedBarcode = "";
-const codeReader = new ZXing.BrowserBarcodeReader();
-const videoElement = document.getElementById('video');
-const itemNameEl = document.getElementById('itemName');
+let selectedMode = 'add';
+let currentStream;
 
-// Start barcode scanning
-codeReader
-  .decodeFromVideoDevice(null, videoElement, (result, err) => {
-    if (result) {
-      const code = result.getText();
-      console.log("Scanned barcode:", code);
-      lastScannedBarcode = code;
-
-      document.getElementById('quantity').value = "1";
-      lookupProductName(code);
-    }
-  })
-  .catch(err => {
-    console.error("Camera init error:", err);
-    alert("Camera error: Please allow access or try another browser.");
-  });
-
-// Lookup product name
-function lookupProductName(barcode) {
-  fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
-    .then(res => res.json())
-    .then(data => {
-      const name = data?.product?.product_name;
-      if (name) {
-        itemNameEl.value = name;
-      } else {
-        fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`)
-          .then(res => res.json())
-          .then(upcData => {
-            const fallbackName = upcData?.items?.[0]?.title;
-            itemNameEl.value = fallbackName || "Unknown item";
-          })
-          .catch(() => {
-            itemNameEl.value = "Unknown item";
-          });
-      }
-    })
-    .catch(() => {
-      itemNameEl.value = "Unknown item";
-    });
-}
-
-// Auto-fill quantity = 1 on manual typing (always)
-let quantityTouched = false;
-itemNameEl.addEventListener("input", () => {
-  const quantityInput = document.getElementById('quantity');
-  if (!quantityTouched && quantityInput.value === "") {
-    quantityInput.value = "1";
-    quantityTouched = true;
-  }
-});
-
-// Submit data (with Remove confirmation)
-function submitData() {
-  const itemName = document.getElementById('itemName').value.trim();
-  const quantity = document.getElementById('quantity').value.trim();
-
-  // Accept either barcode or typed item
-  if (itemName === "" && lastScannedBarcode === "") {
-    alert("Please enter an item name or scan a barcode.");
-    return;
-  }
-
-  if (currentMode === 'remove') {
-    const confirmMsg = `Are you sure you want to remove ${quantity || 1} × ${itemName || 'this item'}?`;
-    if (!confirm(confirmMsg)) return;
-  }
-
-  const payload = {
-    mode: currentMode,
-    item: itemName,
-    barcode: lastScannedBarcode,
-    quantity: quantity,
-    unit: document.getElementById('unit').value,
-    purchaseDate: document.getElementById('purchaseDate').value,
-    expiryDate: document.getElementById('expiryDate').value,
-    location: document.getElementById('location').value,
-    notes: document.getElementById('notes').value
-  };
-
-  console.log("Submitting:", payload);
-
-  fetch("https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec", {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  })
-  .then(() => {
-    showToast(currentMode === 'add' ? "Item added" : "Item removed");
-    resetForm();
-    lastScannedBarcode = "";
-  })
-  .catch(err => {
-    console.error("Submit error:", err);
-    alert("Failed to submit item.");
-  });
-}
-
-// Reset form after submission
-function resetForm() {
-  document.getElementById('itemName').value = "";
-  document.getElementById('quantity').value = "";
-  document.getElementById('unit').value = "";
-  document.getElementById('purchaseDate').value = new Date().toISOString().split("T")[0];
-  document.getElementById('expiryDate').value = "";
-  document.getElementById('location').value = "";
-  document.getElementById('notes').value = "";
-  quantityTouched = false;
-  itemNameEl.focus();
-}
-
-// Toast message
-function showToast(message) {
-  let toast = document.createElement("div");
-  toast.innerText = message;
-  toast.style.position = "fixed";
-  toast.style.bottom = "30px";
-  toast.style.left = "50%";
-  toast.style.transform = "translateX(-50%)";
-  toast.style.background = "#4CAF50";
-  toast.style.color = "#fff";
-  toast.style.padding = "10px 20px";
-  toast.style.borderRadius = "6px";
-  toast.style.fontSize = "14px";
-  toast.style.zIndex = 1000;
-  toast.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.remove();
-  }, 2000);
-}
-
-// Auto-fill today's date
-function setDefaultDate() {
-  document.getElementById('purchaseDate').value = new Date().toISOString().split("T")[0];
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  setDefaultDate();
-});
-
-// Toggle between add/remove mode
 function setMode(mode) {
-  currentMode = mode;
-  document.getElementById('modeAdd').classList.remove('active');
-  document.getElementById('modeRemove').classList.remove('active');
+  selectedMode = mode;
+  document.getElementById("modeAdd").classList.remove("active");
+  document.getElementById("modeRemove").classList.remove("active");
+  document.getElementById("mode" + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add("active");
 
-  if (mode === 'add') {
-    document.getElementById('modeAdd').classList.add('active');
-    showToast("Switched to Add mode");
+  if (selectedMode === 'remove') {
+    document.getElementById("video").classList.add("hidden");
   } else {
-    document.getElementById('modeRemove').classList.add('active');
-    showToast("Switched to Remove mode");
+    document.getElementById("video").classList.remove("hidden");
+    startCamera();
   }
 
   resetForm();
+}
+
+function resetForm() {
+  document.getElementById("itemName").value = "";
+  document.getElementById("quantity").value = "1";
+  document.getElementById("unit").value = "";
+  document.getElementById("purchaseDate").valueAsDate = new Date();
+  document.getElementById("expiryDate").value = "";
+  document.getElementById("notes").value = "";
+}
+
+function submitData() {
+  const itemName = document.getElementById("itemName").value.trim();
+  const quantity = document.getElementById("quantity").value.trim() || "1";
+  const unit = document.getElementById("unit").value.trim();
+  const purchaseDate = document.getElementById("purchaseDate").value;
+  const expiryDate = document.getElementById("expiryDate").value;
+  const location = document.getElementById("location").value;
+  const notes = document.getElementById("notes").value.trim();
+
+  if (!itemName) {
+    alert("Please enter an item name.");
+    return;
+  }
+
+  if (selectedMode === "remove") {
+    const confirmed = confirm(`Are you sure you want to remove "${itemName}" from your inventory?`);
+    if (!confirmed) return;
+  }
+
+  const payload = {
+    action: selectedMode === "add" ? "addItem" : "removeItem",
+    itemName,
+    quantity,
+    unit,
+    purchaseDate,
+    expiryDate,
+    location,
+    notes
+  };
+
+  fetch("https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  })
+    .then(res => res.json())
+    .then(response => {
+      if (response.success) {
+        alert("Item submitted!");
+        resetForm();
+      } else {
+        alert("Failed to submit item.");
+      }
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      alert("Error submitting item.");
+    });
+}
+
+function startCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+
+  const video = document.getElementById("video");
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then(stream => {
+      currentStream = stream;
+      video.srcObject = stream;
+      video.setAttribute("playsinline", true);
+      video.play();
+
+      const codeReader = new ZXing.BrowserBarcodeReader();
+      codeReader.decodeFromVideoDevice(null, video, result => {
+        if (result) {
+          const barcode = result.text;
+          fetchProductFromBarcode(barcode);
+        }
+      });
+    })
+    .catch(err => {
+      console.error("Camera error:", err);
+    });
+}
+
+function fetchProductFromBarcode(barcode) {
+  // Replace with actual barcode lookup or manually add logic
+  console.log("Scanned barcode:", barcode);
+  document.getElementById("itemName").value = "";
 }
