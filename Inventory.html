@@ -2,250 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Inventory Viewer</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
     }
+
     h2 {
       margin-bottom: 10px;
     }
+
+    .location-title {
+      color: green;
+      margin-top: 30px;
+    }
+
     table {
-      border-collapse: collapse;
       width: 100%;
+      border-collapse: collapse;
       margin-top: 10px;
     }
+
     th, td {
-      border: 1px solid #ddd;
+      border: 1px solid #ccc;
       padding: 6px;
+      text-align: left;
     }
+
     th {
       background-color: #f2f2f2;
     }
+
     td[contenteditable="true"] {
-      background-color: #fff7cc;
+      background-color: #fffacd;
+      cursor: pointer;
     }
-    .updated {
-      background-color: #d4edda !important;
-    }
-    .expired {
-      background-color: #ffe6e6;
-    }
-    .soon {
-      background-color: #fff5cc;
-    }
-    .location-group {
-      margin-bottom: 40px;
-    }
-    .filter-controls {
+
+    .back-link {
       margin-bottom: 20px;
-    }
-    .filter-controls input,
-    .filter-controls select,
-    .filter-controls button {
-      padding: 6px;
-      margin-right: 10px;
-    }
-    .location-heading {
+      display: inline-block;
       color: green;
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <a href="index.html" style="color: green;">&larr; Back to Scanner</a>
+  <a href="index.html" class="back-link">&larr; Back to Scanner</a>
   <h2>Inventory Viewer</h2>
-
-  <div class="filter-controls">
-    <input id="searchInput" type="text" placeholder="Search..." oninput="renderTable()" />
-    <select id="locationFilter" onchange="renderTable()">
-      <option value="">All Locations</option>
-      <option value="Freezer (garage)">Freezer (garage)</option>
-      <option value="Freezer (dining room)">Freezer (dining room)</option>
-      <option value="Fridge (dining room)">Fridge (dining room)</option>
-      <option value="Fridge (kitchen)">Fridge (kitchen)</option>
-      <option value="Unspecified">Unspecified</option>
-    </select>
-    <select id="expiryFilter" onchange="renderTable()">
-      <option value="">All Expiries</option>
-      <option value="expired">Expired</option>
-      <option value="soon">Expiring Soon</option>
-    </select>
-    <button onclick="clearFilters()">Show all</button>
-  </div>
-
-  <div id="inventoryContainer"></div>
+  <div id="inventoryTable"></div>
 
   <script>
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
-    let inventoryData = [];
-
-    function formatShortDate(dateString) {
-      if (!dateString) return '';
-      const d = new Date(dateString);
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = String(d.getFullYear()).slice(-2);
-      return `${day}/${month}/${year}`;
-    }
-
-    function classifyExpiry(expiryDate) {
-      if (!expiryDate) return "";
-      const today = new Date();
-      const expiry = new Date(expiryDate);
-      if (isNaN(expiry)) return "";
-      const diff = (expiry - today) / (1000 * 60 * 60 * 24);
-      if (diff < 0) return "expired";
-      if (diff <= 3) return "soon";
-      return "";
-    }
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
     async function loadInventory() {
-      const res = await fetch(SHEET_URL);
+      const res = await fetch(scriptURL);
       const data = await res.json();
-      inventoryData = data.slice(1).map((row, index) => ({
-        rowIndex: index + 2,
-        item: row[1],
-        barcode: row[2],
-        qty: row[3],
-        unit: row[4],
-        purchaseDate: row[5],
-        expiryDate: row[6],
-        location: row[7] || 'Unspecified',
-        notes: row[8]
-      }));
-      renderTable();
-    }
 
-    function clearFilters() {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('locationFilter').value = '';
-      document.getElementById('expiryFilter').value = '';
-      renderTable();
-    }
-
-    function renderTable() {
-      const container = document.getElementById('inventoryContainer');
-      container.innerHTML = '';
-      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-      const locationFilter = document.getElementById('locationFilter').value;
-      const expiryFilter = document.getElementById('expiryFilter').value;
-
-      const filtered = inventoryData.filter(item => {
-        const expiryStatus = classifyExpiry(item.expiryDate);
-        return (
-          (!locationFilter || item.location === locationFilter) &&
-          (!expiryFilter || expiryFilter === expiryStatus) &&
-          (
-            item.item?.toLowerCase().includes(searchTerm) ||
-            item.unit?.toLowerCase().includes(searchTerm) ||
-            item.notes?.toLowerCase().includes(searchTerm)
-          )
-        );
-      });
-
+      // Group by location
       const grouped = {};
-      filtered.forEach(entry => {
-        if (!grouped[entry.location]) grouped[entry.location] = [];
-        grouped[entry.location].push(entry);
+      data.forEach((row, index) => {
+        const location = row[7] || 'Unspecified';
+        if (!grouped[location]) grouped[location] = [];
+        grouped[location].push([index + 1, ...row]);
       });
 
-      Object.entries(grouped).forEach(([location, entries]) => {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'location-group';
-
-        const heading = document.createElement('h3');
-        heading.className = 'location-heading';
-        heading.textContent = location;
-        groupDiv.appendChild(heading);
-
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const headRow = document.createElement('tr');
-        ['#', 'Item', 'Qty', 'Unit', 'Purchase Date', 'Expiry Date', 'Notes'].forEach(header => {
-          const th = document.createElement('th');
-          th.textContent = header;
-          headRow.appendChild(th);
+      // Build table
+      let html = "";
+      for (const location in grouped) {
+        html += `<h3 class="location-title">${location}</h3>`;
+        html += `
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Unit</th>
+                <th>Purchase Date</th>
+                <th>Expiry Date</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        grouped[location].forEach((row) => {
+          html += `<tr data-row="${row[0]}">`;
+          for (let i = 1; i < row.length; i++) {
+            const editable = (i === 2 || i === 3 || i === 4 || i === 5 || i === 6); // Qty, Unit, Purchase, Expiry, Notes
+            let value = row[i] || "";
+            if (i === 4 || i === 5) {
+              value = value ? new Date(value).toLocaleDateString("en-GB") : "";
+            }
+            html += `<td contenteditable="${editable}" data-col="${i}">${value}</td>`;
+          }
+          html += `</tr>`;
         });
-        thead.appendChild(headRow);
-        table.appendChild(thead);
+        html += "</tbody></table>";
+      }
 
-        const tbody = document.createElement('tbody');
-        entries.forEach((entry, i) => {
-          const tr = document.createElement('tr');
-          tr.appendChild(editableCell(i + 1, false));
+      document.getElementById("inventoryTable").innerHTML = html;
 
-          [
-            ['item', true],
-            ['qty', true],
-            ['unit', true],
-            ['purchaseDate', true],
-            ['expiryDate', true],
-            ['notes', true]
-          ].forEach(([key, editable]) => {
-            let val = entry[key];
-            if (key === 'purchaseDate' || key === 'expiryDate') val = formatShortDate(val);
-            const td = editableCell(val, editable);
-            if (editable) {
-              td.dataset.rowIndex = entry.rowIndex;
-              td.dataset.columnName = key;
-              td.addEventListener('blur', () => updateCell(td));
-              td.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  td.blur();
-                }
-              });
+      // Add inline editing listener
+      document.querySelectorAll("td[contenteditable='true']").forEach(cell => {
+        cell.addEventListener("blur", async () => {
+          const row = cell.closest("tr").dataset.row;
+          const col = cell.dataset.col;
+          const newValue = cell.innerText.trim();
+
+          const payload = {
+            action: "update",
+            row: parseInt(row),
+            col: parseInt(col),
+            value: newValue
+          };
+
+          const response = await fetch(scriptURL, {
+            method: "POST",
+            body: JSON.stringify(payload),
+            headers: {
+              "Content-Type": "application/json"
             }
-            if (key === 'expiryDate') {
-              const status = classifyExpiry(entry.expiryDate);
-              if (status) td.classList.add(status);
-            }
-            tr.appendChild(td);
           });
 
-          tbody.appendChild(tr);
+          const result = await response.json();
+          if (!result.success) {
+            alert("Update failed: " + result.error);
+          }
         });
-
-        table.appendChild(tbody);
-        groupDiv.appendChild(table);
-        container.appendChild(groupDiv);
       });
-    }
-
-    function editableCell(value, editable) {
-      const td = document.createElement('td');
-      td.textContent = value || '';
-      if (editable) td.setAttribute("contenteditable", "true");
-      return td;
-    }
-
-    async function updateCell(td) {
-      const newValue = td.textContent.trim();
-      const rowIndex = td.dataset.rowIndex;
-      const columnName = td.dataset.columnName;
-
-      if (!rowIndex || !columnName) return;
-
-      const res = await fetch(SHEET_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update',
-          rowIndex: parseInt(rowIndex),
-          columnName,
-          newValue
-        })
-      });
-
-      const result = await res.json();
-      if (result.success) {
-        td.classList.add('updated');
-        setTimeout(() => td.classList.remove('updated'), 800);
-      } else {
-        alert("Update failed: " + result.error);
-      }
     }
 
     loadInventory();
