@@ -12,7 +12,10 @@ codeReader
       console.log("Scanned barcode:", code);
       lastScannedBarcode = code;
 
-      lookupProductName(code); // lookup in both modes
+      // Set default quantity to 1
+      document.getElementById('quantity').value = "1";
+
+      lookupProductName(code); // Lookup name in all modes
     }
   })
   .catch(err => {
