@@ -1,112 +1,108 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fridge Inventory</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      max-width: 500px;
-      margin: auto;
+const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
+
+let mode = "add";
+let barcode = "";
+
+function setMode(newMode) {
+  mode = newMode;
+  document.getElementById("modeAdd").classList.toggle("active", mode === "add");
+  document.getElementById("modeRemove").classList.toggle("active", mode === "remove");
+
+  // Clear form
+  document.getElementById("itemName").value = "";
+  document.getElementById("quantity").value = "1";
+  document.getElementById("unit").value = "";
+  document.getElementById("purchaseDate").value = "";
+  document.getElementById("expiryDate").value = "";
+  document.getElementById("notes").value = "";
+  barcode = "";
+}
+
+function submitData() {
+  const item = document.getElementById("itemName").value.trim();
+  const qty = document.getElementById("quantity").value || "1";
+  const unit = document.getElementById("unit").value;
+  const purchaseDate = document.getElementById("purchaseDate").value;
+  const expiryDate = document.getElementById("expiryDate").value;
+  const location = document.getElementById("location").value;
+  const notes = document.getElementById("notes").value;
+
+  if (!item && !barcode) {
+    alert("Please scan a barcode or enter an item name.");
+    return;
+  }
+
+  const data = {
+    mode,
+    item,
+    quantity: qty,
+    unit,
+    purchaseDate,
+    expiryDate,
+    location,
+    barcode,
+    notes
+  };
+
+  fetch(scriptURL, {
+    method: "POST",
+    body: JSON.stringify(data)
+  })
+    .then(res => res.json())
+    .then(response => {
+      if (response.success) {
+        alert(`${mode === "add" ? "Added" : "Removed"} successfully.`);
+        document.getElementById("itemName").value = "";
+        document.getElementById("quantity").value = "1";
+        document.getElementById("unit").value = "";
+        document.getElementById("purchaseDate").value = "";
+        document.getElementById("expiryDate").value = "";
+        document.getElementById("notes").value = "";
+        barcode = "";
+      } else {
+        alert("Error: " + response.error);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Failed to submit data.");
+    });
+}
+
+// Barcode Scanner Setup
+const codeReader = new ZXing.BrowserMultiFormatReader();
+const videoElement = document.getElementById("video");
+
+codeReader
+  .listVideoInputDevices()
+  .then(videoInputDevices => {
+    const firstDeviceId = videoInputDevices[0]?.deviceId;
+    if (firstDeviceId) {
+      codeReader.decodeFromVideoDevice(firstDeviceId, videoElement, (result, err) => {
+        if (result) {
+          barcode = result.text;
+          fetch(`${scriptURL}?lookup=${barcode}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.item) {
+                document.getElementById("itemName").value = data.item;
+                document.getElementById("quantity").value = "1";
+              } else {
+                alert("Failed to look up item.");
+              }
+            })
+            .catch(() => alert("Failed to look up item."));
+        }
+      });
     }
+  })
+  .catch(err => {
+    console.error("Camera error", err);
+  });
 
-    .mode-toggle {
-      display: flex;
-      justify-content: space-around;
-      margin-bottom: 20px;
-    }
-
-    .mode-toggle button {
-      flex: 1;
-      padding: 10px;
-      margin: 0 5px;
-      font-weight: bold;
-      border: 2px solid #4CAF50;
-      background-color: #fff;
-      color: #4CAF50;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .mode-toggle button.active {
-      background-color: #4CAF50;
-      color: #fff;
-    }
-
-    video {
-      width: 100%;
-      margin-bottom: 15px;
-    }
-
-    label {
-      font-weight: bold;
-      margin-top: 10px;
-      display: block;
-    }
-
-    input, select, button {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 12px;
-    }
-
-    .date-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .date-row .date-group {
-      flex: 1;
-    }
-  </style>
-</head>
-<body>
-
-  <h2>Fridge Inventory</h2>
-
-  <!-- Mode Toggle -->
-  <div class="mode-toggle">
-    <button id="modeAdd" class="active" onclick="setMode('add')">Add</button>
-    <button id="modeRemove" onclick="setMode('remove')">Remove</button>
-  </div>
-
-  <!-- Camera feed -->
-  <video id="video" autoplay muted playsinline></video>
-
-  <!-- Item Form -->
-  <input id="itemName" placeholder="Item name" />
-  <input id="quantity" placeholder="Quantity" value="1" />
-  <input id="unit" placeholder="Unit (e.g. pcs, g)" />
-
-  <!-- Dates Row -->
-  <div class="date-row">
-    <div class="date-group">
-      <label for="purchaseDate">Purchase Date</label>
-      <input id="purchaseDate" type="date" />
-    </div>
-    <div class="date-group">
-      <label for="expiryDate">Expiry Date</label>
-      <input id="expiryDate" type="date" />
-    </div>
-  </div>
-
-  <!-- Location Dropdown -->
-  <label for="location">Location</label>
-  <select id="location">
-    <option value="Freezer (garage)">Freezer (garage)</option>
-    <option value="Freezer (dining room)">Freezer (dining room)</option>
-    <option value="Fridge (dining room)">Fridge (dining room)</option>
-    <option value="Fridge (kitchen)">Fridge (kitchen)</option>
-  </select>
-
-  <input id="notes" placeholder="Notes" />
-  <button onclick="submitData()">Submit</button>
-
-  <!-- Scripts -->
-  <script src="https://unpkg.com/@zxing/library@latest"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+// Autofill quantity to 1 on typing item name
+document.getElementById("itemName").addEventListener("input", () => {
+  if (!document.getElementById("quantity").value) {
+    document.getElementById("quantity").value = "1";
+  }
+});
