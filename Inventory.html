@@ -2,280 +2,158 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inventory Viewer</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 1000px;
-      margin: auto;
     }
-
     h2 {
       margin-bottom: 10px;
     }
-
-    h3 {
-      margin-top: 30px;
-      margin-bottom: 10px;
-      color: #4CAF50;
-      border-bottom: 2px solid #4CAF50;
-      padding-bottom: 4px;
+    .location-group {
+      margin-bottom: 40px;
     }
-
     table {
-      width: 100%;
       border-collapse: collapse;
-      font-size: 14px;
-      margin-bottom: 10px;
+      width: 100%;
+      margin-top: 10px;
     }
-
     th, td {
       border: 1px solid #ddd;
       padding: 8px;
-      text-align: left;
     }
-
     th {
-      background-color: #f4f4f4;
+      background-color: #f2f2f2;
     }
-
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
+    td[contenteditable="true"] {
+      background-color: #fff7cc;
+      cursor: text;
     }
-
-    input[type="text"], input[type="number"], input[type="date"] {
-      width: 100%;
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-
-    .highlight {
+    .updated {
       background-color: #d4edda !important;
-    }
-
-    .back-link {
-      margin-bottom: 15px;
-      display: inline-block;
-      text-decoration: none;
-      color: #4CAF50;
-      font-weight: bold;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .expired {
-      color: red;
-      font-weight: bold;
-    }
-
-    .expiring-soon {
-      color: darkorange;
     }
   </style>
 </head>
 <body>
-
-  <a href="index.html" class="back-link">← Back to Scanner</a>
+  <a href="index.html" style="color: green;">&larr; Back to Scanner</a>
   <h2>Inventory Viewer</h2>
-
-  <input type="text" id="searchBox" placeholder="Search items, units, or notes..." />
-  <select id="expiryFilter">
-    <option value="all">Show all</option>
-    <option value="expired">Expired only</option>
-    <option value="soon">Expiring within 3 days</option>
-  </select>
-
-  <select id="locationSelect" disabled>
-    <option value="all">All locations</option>
-  </select>
-
-  <div id="groupedTables"></div>
+  <div id="inventoryContainer"></div>
 
   <script>
-    const editableCols = {
-      2: "Quantity",
-      5: "Expiry Date",
-      6: "Notes"
-    };
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
-    let sectionMap = {};
+    async function loadInventory() {
+      const response = await fetch(SHEET_URL);
+      const data = await response.json();
 
-    function formatDate(dateStr) {
-      if (!dateStr) return "";
-      const date = new Date(dateStr);
-      if (isNaN(date)) return dateStr;
-      const dd = String(date.getDate()).padStart(2, '0');
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const yy = String(date.getFullYear()).slice(-2);
-      return `${dd}/${mm}/${yy}`;
-    }
+      const headers = data[0];
+      const rows = data.slice(1);
 
-    function classifyExpiry(dateStr) {
-      if (!dateStr) return "";
-      const today = new Date();
-      const expiry = new Date(dateStr);
-      if (isNaN(expiry)) return "";
-      const diff = (expiry - today) / (1000 * 60 * 60 * 24);
-      if (diff < 0) return "expired";
-      if (diff <= 3) return "soon";
-      return "";
-    }
+      // Group by location
+      const locationGroups = {};
+      rows.forEach((row, index) => {
+        const location = row[7] || 'Unspecified';
+        if (!locationGroups[location]) locationGroups[location] = [];
+        locationGroups[location].push({ rowIndex: index + 2, row }); // +2 for headers
+      });
 
-    let allSections = [];
+      const container = document.getElementById('inventoryContainer');
+      container.innerHTML = '';
 
-    fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec')
-      .then(response => response.json())
-      .then(data => {
-        const grouped = {};
-        data.slice(1).forEach((row, idx) => {
-          const location = row[7] || "Unspecified";
-          if (!grouped[location]) grouped[location] = [];
-          grouped[location].push({ row, rowIndex: idx + 2 }); // store Google Sheet row index
+      Object.keys(locationGroups).forEach(location => {
+        const section = document.createElement('div');
+        section.className = 'location-group';
+        section.innerHTML = `<h3 style="color: green;">${location}</h3>`;
+
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+
+        ['#', 'Item', 'Qty', 'Unit', 'Purchase Date', 'Expiry Date', 'Notes'].forEach(h => {
+          const th = document.createElement('th');
+          th.textContent = h;
+          headerRow.appendChild(th);
         });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
 
-        const locationSelect = document.getElementById("locationSelect");
-        const container = document.getElementById("groupedTables");
-        container.innerHTML = "";
+        const tbody = document.createElement('tbody');
 
-        Object.keys(grouped).sort().forEach(location => {
-          const section = document.createElement("div");
-          section.dataset.location = location;
-          sectionMap[location] = section;
-          allSections.push(section);
+        locationGroups[location].forEach((entry, idx) => {
+          const tr = document.createElement('tr');
+          const row = entry.row;
 
-          const option = document.createElement("option");
-          option.value = location;
-          option.textContent = location;
-          locationSelect.appendChild(option);
+          // Serial #
+          tr.appendChild(createCell(idx + 1, false));
 
-          const heading = document.createElement("h3");
-          heading.textContent = location;
-          section.appendChild(heading);
+          // Editable fields
+          const editableFields = [
+            { index: 1, name: 'Item' },
+            { index: 3, name: 'Quantity' },
+            { index: 4, name: 'Unit' },
+            { index: 5, name: 'Purchase Date' },
+            { index: 6, name: 'Expiry Date' },
+            { index: 8, name: 'Notes' }
+          ];
 
-          const table = document.createElement("table");
-          const thead = document.createElement("thead");
-          const headRow = document.createElement("tr");
-          ["#", "Item", "Qty", "Unit", "Purchase Date", "Expiry Date", "Notes"].forEach(text => {
-            const th = document.createElement("th");
-            th.textContent = text;
-            headRow.appendChild(th);
-          });
-          thead.appendChild(headRow);
-          table.appendChild(thead);
-
-          const tbody = document.createElement("tbody");
-
-          grouped[location].forEach((entry, index) => {
-            const row = entry.row;
-            const rowIndex = entry.rowIndex;
-            const tr = document.createElement("tr");
-
-            const indices = [1, 3, 4, 5, 6, 8];
-            const searchValues = [];
-
-            const serialTd = document.createElement("td");
-            serialTd.textContent = index + 1;
-            tr.appendChild(serialTd);
-
-            indices.forEach((i, colIndex) => {
-              const td = document.createElement("td");
-              let value = (i === 5 || i === 6) ? formatDate(row[i]) : row[i];
-              if (i === 6) {
-                const status = classifyExpiry(row[i]);
-                if (status === "expired") td.classList.add("expired");
-                else if (status === "soon") td.classList.add("expiring-soon");
-                tr.setAttribute("data-expiry", status);
+          editableFields.forEach(field => {
+            const td = createCell(row[field.index], true);
+            td.dataset.rowIndex = entry.rowIndex;
+            td.dataset.columnName = field.name;
+            td.addEventListener('blur', () => updateCell(td));
+            td.addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                td.blur();
               }
-
-              if (editableCols[colIndex + 1]) {
-                td.setAttribute("contenteditable", true);
-                td.addEventListener("blur", () => handleEdit(td, rowIndex, editableCols[colIndex + 1]));
-                td.addEventListener("keydown", (e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    td.blur();
-                  }
-                });
-              }
-
-              td.textContent = value;
-              tr.appendChild(td);
-              searchValues.push((value || "").toString().toLowerCase());
             });
-
-            tr.setAttribute("data-search", searchValues.join(" "));
-            tbody.appendChild(tr);
+            tr.appendChild(td);
           });
 
-          table.appendChild(tbody);
-          section.appendChild(table);
-          container.appendChild(section);
+          tbody.appendChild(tr);
         });
 
-        locationSelect.disabled = false;
-        applyFilters();
-      });
-
-    function applyFilters() {
-      const query = document.getElementById("searchBox").value.trim().toLowerCase();
-      const expiryFilter = document.getElementById("expiryFilter").value;
-      const locationFilter = document.getElementById("locationSelect").value;
-
-      allSections.forEach(section => {
-        const rows = section.querySelectorAll("tbody tr");
-        const thisLocation = section.dataset.location;
-        const showSection = locationFilter === "all" || locationFilter === thisLocation;
-
-        let anyVisible = false;
-        rows.forEach(row => {
-          const text = row.getAttribute("data-search");
-          const expiry = row.getAttribute("data-expiry") || "";
-          const matchText = text.includes(query);
-          const matchExpiry =
-            expiryFilter === "all" ||
-            (expiryFilter === "expired" && expiry === "expired") ||
-            (expiryFilter === "soon" && expiry === "soon");
-
-          const visible = matchText && matchExpiry;
-          row.classList.toggle("hidden", !visible);
-          if (visible) anyVisible = true;
-        });
-
-        section.style.display = showSection && anyVisible ? "" : "none";
+        table.appendChild(tbody);
+        section.appendChild(table);
+        container.appendChild(section);
       });
     }
 
-    document.getElementById("searchBox").addEventListener("input", applyFilters);
-    document.getElementById("expiryFilter").addEventListener("change", applyFilters);
-    document.getElementById("locationSelect").addEventListener("change", applyFilters);
+    function createCell(value, editable) {
+      const td = document.createElement('td');
+      td.textContent = value ?? '';
+      if (editable) td.setAttribute('contenteditable', 'true');
+      return td;
+    }
 
-    function handleEdit(cell, rowIndex, columnName) {
-      const newValue = cell.textContent.trim();
-      cell.classList.remove("highlight");
+    async function updateCell(td) {
+      const newValue = td.textContent.trim();
+      const rowIndex = td.dataset.rowIndex;
+      const columnName = td.dataset.columnName;
 
-      fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec', {
+      const res = await fetch(SHEET_URL, {
         method: 'POST',
         body: JSON.stringify({
-          action: "update",
-          rowIndex,
+          action: 'update',
+          rowIndex: parseInt(rowIndex),
           columnName,
           newValue
-        })
-      }).then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            cell.classList.add("highlight");
-            setTimeout(() => cell.classList.remove("highlight"), 1000);
-          } else {
-            alert("Failed to update. Try again.");
-          }
-        });
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        td.classList.add('updated');
+        setTimeout(() => td.classList.remove('updated'), 1000);
+      } else {
+        alert("Update failed: " + result.error);
+      }
     }
+
+    loadInventory();
   </script>
 </body>
 </html>
