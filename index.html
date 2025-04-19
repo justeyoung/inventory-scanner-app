@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fridge Inventory</title>
+
+  <!-- PWA: Manifest + Theme -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#4CAF50" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
   <style>
     body {
       font-family: sans-serif;
@@ -108,5 +114,14 @@
   <!-- Scripts -->
   <script src="https://unpkg.com/@zxing/library@latest"></script>
   <script src="app.js"></script>
+
+  <!-- Register Service Worker for PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(reg => console.log("Service Worker registered"))
+        .catch(err => console.error("Service Worker failed", err));
+    }
+  </script>
 </body>
 </html>
