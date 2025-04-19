@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fridge Inventory Scanner</title>
+  <title>Fridge Inventory</title>
   <style>
     body {
       font-family: sans-serif;
@@ -40,6 +40,12 @@
       margin-bottom: 15px;
     }
 
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+
     input, button {
       width: 100%;
       padding: 8px;
@@ -64,8 +70,13 @@
   <input id="itemName" placeholder="Item name" />
   <input id="quantity" placeholder="Quantity" />
   <input id="unit" placeholder="Unit (e.g. pcs, g)" />
+
+  <label for="purchaseDate">Purchase Date</label>
   <input id="purchaseDate" type="date" />
+
+  <label for="expiryDate">Expiry Date</label>
   <input id="expiryDate" type="date" />
+
   <input id="location" placeholder="Location (Fridge/Freezer)" />
   <input id="notes" placeholder="Notes" />
   <button onclick="submitData()">Submit</button>
