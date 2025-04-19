@@ -3,101 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Inventory Viewer</title>
+  <title>Fridge Inventory</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
+      max-width: 500px;
+      margin: auto;
     }
 
-    table {
+    .mode-toggle {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+
+    .mode-toggle button {
+      flex: 1;
+      padding: 10px;
+      margin: 0 5px;
+      font-weight: bold;
+      border: 2px solid #4CAF50;
+      background-color: #fff;
+      color: #4CAF50;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .mode-toggle button.active {
+      background-color: #4CAF50;
+      color: #fff;
+    }
+
+    video {
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
+      margin-bottom: 15px;
     }
 
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px;
-      text-align: left;
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
     }
 
-    th {
-      background-color: #f2f2f2;
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
     }
 
-    .location-title {
-      margin-top: 30px;
+    .date-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .date-row .date-group {
+      flex: 1;
     }
   </style>
 </head>
 <body>
-  <h2>Inventory Viewer</h2>
-  <div id="inventoryTable">Loading...</div>
 
-  <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
+  <h2>Fridge Inventory</h2>
 
-    function formatDate(dateStr) {
-      if (!dateStr) return "";
-      const date = new Date(dateStr);
-      return isNaN(date) ? "" : date.toLocaleDateString("en-GB");
-    }
+  <!-- Mode Toggle -->
+  <div class="mode-toggle">
+    <button id="modeAdd" class="active" onclick="setMode('add')">Add</button>
+    <button id="modeRemove" onclick="setMode('remove')">Remove</button>
+  </div>
 
-    async function loadInventory() {
-      try {
-        const res = await fetch(scriptURL);
-        const rawData = await res.json();
-        const header = rawData[0];
-        const data = rawData.slice(1);
+  <!-- Camera feed -->
+  <video id="video" autoplay muted playsinline></video>
 
-        const grouped = {};
-        data.forEach((row) => {
-          const location = row[7] || "Unspecified";
-          if (!grouped[location]) grouped[location] = [];
-          grouped[location].push(row);
-        });
+  <!-- Item Form -->
+  <input id="itemName" placeholder="Item name" />
+  <input id="quantity" placeholder="Quantity" value="1" />
+  <input id="unit" placeholder="Unit (e.g. pcs, g)" />
 
-        let html = "";
-        for (const location in grouped) {
-          html += `<h3 class="location-title">${location}</h3>`;
-          html += `
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Item</th>
-                  <th>Qty</th>
-                  <th>Unit</th>
-                  <th>Purchase Date</th>
-                  <th>Expiry Date</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-          grouped[location].forEach((row, i) => {
-            html += `<tr>`;
-            html += `<td>${i + 1}</td>`;
-            html += `<td>${row[1]}</td>`;
-            html += `<td>${row[3]}</td>`;
-            html += `<td>${row[4]}</td>`;
-            html += `<td>${formatDate(row[5])}</td>`;
-            html += `<td>${formatDate(row[6])}</td>`;
-            html += `<td>${row[8] || ""}</td>`;
-            html += `</tr>`;
-          });
-          html += "</tbody></table>";
-        }
+  <!-- Dates Row -->
+  <div class="date-row">
+    <div class="date-group">
+      <label for="purchaseDate">Purchase Date</label>
+      <input id="purchaseDate" type="date" />
+    </div>
+    <div class="date-group">
+      <label for="expiryDate">Expiry Date</label>
+      <input id="expiryDate" type="date" />
+    </div>
+  </div>
 
-        document.getElementById("inventoryTable").innerHTML = html;
-      } catch (error) {
-        document.getElementById("inventoryTable").innerHTML = "Failed to load inventory.";
-        console.error(error);
-      }
-    }
+  <!-- Location Dropdown -->
+  <label for="location">Location</label>
+  <select id="location">
+    <option value="Freezer (garage)">Freezer (garage)</option>
+    <option value="Freezer (dining room)">Freezer (dining room)</option>
+    <option value="Fridge (dining room)">Fridge (dining room)</option>
+    <option value="Fridge (kitchen)">Fridge (kitchen)</option>
+  </select>
 
-    loadInventory();
-  </script>
+  <input id="notes" placeholder="Notes" />
+  <button onclick="submitData()">Submit</button>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <script src="app.js"></script>
 </body>
 </html>
