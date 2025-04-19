@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Add Item</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Add Inventory Item</h2>
+
+  <label for="itemName">Item Name</label>
+  <input id="itemName" placeholder="Enter item name" />
+
+  <label for="barcode">Barcode (optional)</label>
+  <input id="barcode" placeholder="Scan or type barcode" />
+
+  <label for="quantity">Quantity</label>
+  <input id="quantity" type="number" value="1" min="1" />
+
+  <label for="unit">Unit</label>
+  <input id="unit" placeholder="e.g. pcs, g, ml" />
+
+  <label for="purchaseDate">Purchase Date</label>
+  <input id="purchaseDate" type="date" />
+
+  <label for="expiryDate">Expiry Date</label>
+  <input id="expiryDate" type="date" />
+
+  <label for="location">Location</label>
+  <select id="location">
+    <option value="Freezer (garage)">Freezer (garage)</option>
+    <option value="Freezer (dining room)">Freezer (dining room)</option>
+    <option value="Fridge (dining room)">Fridge (dining room)</option>
+    <option value="Fridge (kitchen)">Fridge (kitchen)</option>
+  </select>
+
+  <label for="notes">Notes</label>
+  <input id="notes" placeholder="Optional notes" />
+
+  <button onclick="submitData()">Submit</button>
+
+  <script>
+    // Auto-fill today's date for Purchase Date
+    document.getElementById("purchaseDate").value = new Date().toISOString().split("T")[0];
+
+    function submitData() {
+      alert("Submit button clicked (not wired up yet)");
+    }
+  </script>
+</body>
+</html>
