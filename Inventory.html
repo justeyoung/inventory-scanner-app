@@ -10,10 +10,6 @@
       padding: 20px;
     }
 
-    h2 {
-      margin-bottom: 10px;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -52,7 +48,7 @@
   <div id="inventoryTable">Loading...</div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
+    const scriptURL = "YOUR_SCRIPT_URL_HERE"; // Replace this with your actual deployed Apps Script URL
 
     function formatDate(dateStr) {
       if (!dateStr) return "";
@@ -88,12 +84,12 @@
       rows.forEach((row, index) => {
         html += `<tr data-id="${index + 2}">`;
         html += `<td>${index + 1}</td>`;
-        html += `<td>${row[1]}</td>`;                      // Item (column B)
-        html += `<td contenteditable="true" data-col="4">${row[3]}</td>`; // Quantity (column D = index 4)
-        html += `<td contenteditable="true" data-col="5">${row[4]}</td>`; // Unit (column E = index 5)
-        html += `<td contenteditable="true" data-col="6">${formatDate(row[5])}</td>`; // Purchase Date (F = 6)
-        html += `<td contenteditable="true" data-col="7">${formatDate(row[6])}</td>`; // Expiry Date (G = 7)
-        html += `<td contenteditable="true" data-col="9">${row[8] || ""}</td>`; // Notes (I = 9)
+        html += `<td>${row[1]}</td>`; // Item
+        html += `<td contenteditable="true" data-col="4">${row[3]}</td>`; // Qty (column D)
+        html += `<td contenteditable="true" data-col="5">${row[4]}</td>`; // Unit (column E)
+        html += `<td contenteditable="true" data-col="6">${formatDate(row[5])}</td>`; // Purchase (F)
+        html += `<td contenteditable="true" data-col="7">${formatDate(row[6])}</td>`; // Expiry (G)
+        html += `<td contenteditable="true" data-col="9">${row[8] || ""}</td>`; // Notes (I = col 9)
         html += `<td><button class="save-button">Save</button></td>`;
         html += `</tr>`;
       });
@@ -101,7 +97,6 @@
       html += `</tbody></table>`;
       document.getElementById("inventoryTable").innerHTML = html;
 
-      // Add Save button logic
       document.querySelectorAll(".save-button").forEach(button => {
         button.addEventListener("click", async () => {
           const row = button.closest("tr");
