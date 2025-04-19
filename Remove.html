@@ -17,7 +17,7 @@
       display: block;
       margin: 1rem 0 0.5rem;
     }
-    input, select {
+    input {
       width: 100%;
       padding: 0.5rem;
       box-sizing: border-box;
@@ -33,7 +33,7 @@
 <body>
   <h2>Remove Inventory Item</h2>
 
-  <label for="itemName">Item Name</label>
+  <label for="itemName">Item Name or Barcode</label>
   <input type="text" id="itemName" placeholder="Enter item name or scan barcode" />
 
   <label for="quantity">Quantity to Remove</label>
@@ -52,7 +52,7 @@
       }
 
       const payload = {
-        mode: "remove",  // FIXED
+        action: "remove",
         item: itemName,
         quantity: quantity
       };
