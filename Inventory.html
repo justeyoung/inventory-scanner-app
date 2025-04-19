@@ -9,44 +9,36 @@
       font-family: sans-serif;
       padding: 20px;
     }
-
     h2 {
       margin-bottom: 10px;
     }
-
     .location-title {
       color: green;
       margin-top: 30px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
     }
-
     th, td {
       border: 1px solid #ccc;
       padding: 6px;
       text-align: left;
     }
-
     th {
       background-color: #f2f2f2;
     }
-
     td[contenteditable="true"] {
       background-color: #fffacd;
       cursor: pointer;
     }
-
     .back-link {
       margin-bottom: 20px;
       display: inline-block;
       color: green;
       text-decoration: none;
     }
-
     .back-link:hover {
       text-decoration: underline;
     }
@@ -60,19 +52,26 @@
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      return isNaN(date) ? "" : date.toLocaleDateString("en-GB");
+    }
+
     async function loadInventory() {
       const res = await fetch(scriptURL);
-      const data = await res.json();
+      const rawData = await res.json();
 
-      // Group by location
+      const header = rawData[0]; // e.g. ID, Item, etc.
+      const data = rawData.slice(1); // skip header
+
       const grouped = {};
       data.forEach((row, index) => {
-        const location = row[7] || 'Unspecified';
+        const location = row[7] || "Unspecified";
         if (!grouped[location]) grouped[location] = [];
         grouped[location].push([index + 1, ...row]);
       });
 
-      // Build table
       let html = "";
       for (const location in grouped) {
         html += `<h3 class="location-title">${location}</h3>`;
@@ -91,16 +90,15 @@
             </thead>
             <tbody>
         `;
-        grouped[location].forEach((row) => {
-          html += `<tr data-row="${row[0]}">`;
-          for (let i = 1; i < row.length; i++) {
-            const editable = (i === 2 || i === 3 || i === 4 || i === 5 || i === 6); // Qty, Unit, Purchase, Expiry, Notes
-            let value = row[i] || "";
-            if (i === 4 || i === 5) {
-              value = value ? new Date(value).toLocaleDateString("en-GB") : "";
-            }
-            html += `<td contenteditable="${editable}" data-col="${i}">${value}</td>`;
-          }
+        grouped[location].forEach((row, i) => {
+          html += `<tr data-row="${row[1]}">`; // row[1] is actual ID
+          html += `<td>${i + 1}</td>`;
+          html += `<td>${row[2]}</td>`; // Item
+          html += `<td contenteditable="true" data-col="3">${row[3]}</td>`; // Qty
+          html += `<td contenteditable="true" data-col="4">${row[4]}</td>`; // Unit
+          html += `<td contenteditable="true" data-col="5">${formatDate(row[5])}</td>`; // Purchase Date
+          html += `<td contenteditable="true" data-col="6">${formatDate(row[6])}</td>`; // Expiry Date
+          html += `<td contenteditable="true" data-col="8">${row[8] || ""}</td>`; // Notes
           html += `</tr>`;
         });
         html += "</tbody></table>";
@@ -108,7 +106,6 @@
 
       document.getElementById("inventoryTable").innerHTML = html;
 
-      // Add inline editing listener
       document.querySelectorAll("td[contenteditable='true']").forEach(cell => {
         cell.addEventListener("blur", async () => {
           const row = cell.closest("tr").dataset.row;
@@ -125,9 +122,7 @@
           const response = await fetch(scriptURL, {
             method: "POST",
             body: JSON.stringify(payload),
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: { "Content-Type": "application/json" }
           });
 
           const result = await response.json();
