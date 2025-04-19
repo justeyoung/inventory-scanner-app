@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Remove Item</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Remove Inventory Item</h2>
+
+  <label for="itemName">Item Name</label>
+  <input id="itemName" placeholder="Enter item name or scan barcode" />
+
+  <label for="quantity">Quantity to Remove</label>
+  <input id="quantity" type="number" value="1" min="1" />
+
+  <button onclick="removeItem()">Remove</button>
+
+  <script>
+    function removeItem() {
+      alert("Remove function triggered (logic to come next)");
+    }
+  </script>
+</body>
+</html>
