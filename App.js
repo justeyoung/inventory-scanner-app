@@ -3,7 +3,6 @@ const scriptURL = "https://script.googleusercontent.com/macros/echo?user_content
 async function loadInventory() {
   const res = await fetch(scriptURL);
   const data = await res.json();
-
   const header = data[0];
   const rows = data.slice(1);
 
