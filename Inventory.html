@@ -174,8 +174,7 @@
         const tbody = document.createElement('tbody');
         entries.forEach((entry, i) => {
           const tr = document.createElement('tr');
-
-          tr.appendChild(cell(i + 1, false)); // serial number
+          tr.appendChild(editableCell(i + 1, false));
 
           [
             ['item', true],
@@ -187,7 +186,7 @@
           ].forEach(([key, editable]) => {
             let val = entry[key];
             if (key === 'purchaseDate' || key === 'expiryDate') val = formatShortDate(val);
-            const td = cell(val, editable);
+            const td = editableCell(val, editable);
             if (editable) {
               td.dataset.rowIndex = entry.rowIndex;
               td.dataset.columnName = key;
@@ -215,10 +214,10 @@
       });
     }
 
-    function cell(value, editable) {
+    function editableCell(value, editable) {
       const td = document.createElement('td');
       td.textContent = value || '';
-      if (editable) td.contentEditable = true;
+      if (editable) td.setAttribute("contenteditable", "true");
       return td;
     }
 
@@ -226,6 +225,8 @@
       const newValue = td.textContent.trim();
       const rowIndex = td.dataset.rowIndex;
       const columnName = td.dataset.columnName;
+
+      if (!rowIndex || !columnName) return;
 
       const res = await fetch(SHEET_URL, {
         method: 'POST',
