@@ -68,17 +68,36 @@
   </table>
 
   <script>
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      if (isNaN(date)) return dateStr;
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const yy = String(date.getFullYear()).slice(-2);
+      return `${dd}/${mm}/${yy}`;
+    }
+
     fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec')
       .then(response => response.json())
       .then(data => {
         const tbody = document.querySelector("#inventoryTable tbody");
         data.slice(1).forEach(row => {
           const tr = document.createElement("tr");
-          row.forEach(cell => {
+
+          row.forEach((cell, i) => {
             const td = document.createElement("td");
-            td.textContent = cell;
+
+            // Format dates in purchaseDate (index 5) and expiryDate (index 6)
+            if (i === 5 || i === 6) {
+              td.textContent = formatDate(cell);
+            } else {
+              td.textContent = cell;
+            }
+
             tr.appendChild(td);
           });
+
           tbody.appendChild(tr);
         });
       })
