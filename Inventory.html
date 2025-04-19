@@ -1,6 +1,90 @@
-<!-- All previous <head> section remains the same, including styling and html2pdf script -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory Viewer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 1000px;
+      margin: auto;
+    }
 
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    h3 {
+      margin-top: 30px;
+      margin-bottom: 10px;
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f4f4f4;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .back-link {
+      margin-bottom: 15px;
+      display: inline-block;
+      text-decoration: none;
+      color: #4CAF50;
+      font-weight: bold;
+    }
+
+    select, input[type="text"], button {
+      margin: 10px 0 15px;
+      padding: 8px;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .download-selected-btn {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .expired {
+      color: red;
+      font-weight: bold;
+    }
+
+    .expiring-soon {
+      color: darkorange;
+    }
+  </style>
+</head>
 <body>
+
   <a href="index.html" class="back-link">← Back to Scanner</a>
   <h2>Inventory Viewer</h2>
 
@@ -11,11 +95,11 @@
     <option value="soon">Expiring within 3 days</option>
   </select>
 
-  <select id="locationSelect">
+  <select id="locationSelect" disabled>
     <option value="all">All locations</option>
   </select>
 
-  <button class="download-selected-btn" id="downloadSelectedBtn">Download PDF for Selected Location</button>
+  <button class="download-selected-btn" id="downloadSelectedBtn" disabled>Download PDF for Selected Location</button>
 
   <div id="groupedTables"></div>
 
@@ -44,6 +128,9 @@
     let allSections = [];
     let sectionMap = {};
 
+    const locationSelect = document.getElementById("locationSelect");
+    const container = document.getElementById("groupedTables");
+
     fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec')
       .then(response => response.json())
       .then(data => {
@@ -54,8 +141,6 @@
           grouped[location].push(row);
         });
 
-        const locationSelect = document.getElementById("locationSelect");
-        const container = document.getElementById("groupedTables");
         container.innerHTML = "";
 
         Object.keys(grouped).sort().forEach(location => {
@@ -118,6 +203,9 @@
           container.appendChild(section);
         });
 
+        locationSelect.disabled = false;
+        document.getElementById("downloadSelectedBtn").disabled = false;
+
         applyFilters();
       })
       .catch(error => {
@@ -156,10 +244,10 @@
 
     document.getElementById("searchBox").addEventListener("input", applyFilters);
     document.getElementById("expiryFilter").addEventListener("change", applyFilters);
-    document.getElementById("locationSelect").addEventListener("change", applyFilters);
+    locationSelect.addEventListener("change", applyFilters);
 
     document.getElementById("downloadSelectedBtn").addEventListener("click", () => {
-      const selectedLocation = document.getElementById("locationSelect").value;
+      const selectedLocation = locationSelect.value;
       if (!selectedLocation || selectedLocation === "all") {
         alert("Please select a location first.");
         return;
