@@ -46,7 +46,7 @@ function lookupProductName(barcode) {
     });
 }
 
-// Auto-fill quantity = 1 on manual typing (only once)
+// Auto-fill quantity = 1 on manual typing (always)
 let quantityTouched = false;
 itemNameEl.addEventListener("input", () => {
   const quantityInput = document.getElementById('quantity');
@@ -56,13 +56,14 @@ itemNameEl.addEventListener("input", () => {
   }
 });
 
-// Submit data (with confirmation for Remove)
+// Submit data (with Remove confirmation)
 function submitData() {
   const itemName = document.getElementById('itemName').value.trim();
   const quantity = document.getElementById('quantity').value.trim();
 
-  if (!lastScannedBarcode && itemName === "") {
-    alert("Please scan a barcode or enter an item name.");
+  // Accept either barcode or typed item
+  if (itemName === "" && lastScannedBarcode === "") {
+    alert("Please enter an item name or scan a barcode.");
     return;
   }
 
