@@ -95,7 +95,7 @@
           const table = document.createElement("table");
           const thead = document.createElement("thead");
           const headRow = document.createElement("tr");
-          ["ID", "Item", "Qty", "Unit", "Purchase Date", "Expiry Date", "Notes"].forEach(text => {
+          ["#", "Item", "Qty", "Unit", "Purchase Date", "Expiry Date", "Notes"].forEach(text => {
             const th = document.createElement("th");
             th.textContent = text;
             headRow.appendChild(th);
@@ -104,10 +104,16 @@
           table.appendChild(thead);
 
           const tbody = document.createElement("tbody");
-          grouped[location].forEach(row => {
+          grouped[location].forEach((row, index) => {
             const tr = document.createElement("tr");
 
-            const indices = [0, 1, 3, 4, 5, 6, 8]; // omit barcode and location
+            const indices = [1, 3, 4, 5, 6, 8]; // exclude ID, Barcode, and Location
+
+            // Serial number cell
+            const serialTd = document.createElement("td");
+            serialTd.textContent = index + 1;
+            tr.appendChild(serialTd);
+
             indices.forEach(i => {
               const td = document.createElement("td");
               td.textContent = (i === 5 || i === 6) ? formatDate(row[i]) : row[i];
