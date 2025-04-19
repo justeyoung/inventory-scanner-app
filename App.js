@@ -1,4 +1,4 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycbwmzzYCYcwKnmJ_P9KrveyhnRizaKcWPqFwKkFsQD05W9fE6zc4601cxXxIuGSaqKHvhA/exec'; // Replace with your actual Web App URL
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyemrAsNkZpG0E7ZQOI9Aj12EKqBTBfz3Z3yWF_5PtrqoYJx5uAtyZ4PM7rhcm-J3tnJA/exec'; // Replace with your actual Web App URL
 
 async function loadInventory() {
   const res = await fetch(scriptURL);
