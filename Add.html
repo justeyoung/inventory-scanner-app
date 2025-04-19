@@ -7,114 +7,99 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 2rem;
       max-width: 500px;
-    }
-    h2 {
-      margin-bottom: 1.5rem;
+      margin: 2rem;
     }
     label {
+      margin-top: 1rem;
       display: block;
-      margin: 1rem 0 0.5rem;
     }
     input, select {
       width: 100%;
-      padding: 0.5rem;
-      box-sizing: border-box;
+      padding: 8px;
+      margin-top: 5px;
     }
     button {
       margin-top: 1.5rem;
-      padding: 0.6rem 1rem;
-      font-size: 1rem;
-      cursor: pointer;
+      padding: 10px 20px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
   <h2>Add Inventory Item</h2>
 
-  <label for="item">Item Name</label>
-  <input type="text" id="item" placeholder="e.g. Apple" required />
+  <label>Item Name
+    <input type="text" id="item" required />
+  </label>
 
-  <label for="barcode">Barcode (optional)</label>
-  <input type="text" id="barcode" placeholder="Scan or type barcode" />
+  <label>Barcode (optional)
+    <input type="text" id="barcode" />
+  </label>
 
-  <label for="quantity">Quantity</label>
-  <input type="number" id="quantity" value="1" min="1" />
+  <label>Quantity
+    <input type="number" id="quantity" value="1" />
+  </label>
 
-  <label for="unit">Unit</label>
-  <input type="text" id="unit" placeholder="e.g. pcs, g, ml" />
+  <label>Unit
+    <input type="text" id="unit" placeholder="e.g. pcs, g, ml" />
+  </label>
 
-  <label for="purchaseDate">Purchase Date</label>
-  <input type="date" id="purchaseDate" />
+  <label>Purchase Date
+    <input type="date" id="purchaseDate" />
+  </label>
 
-  <label for="expiryDate">Expiry Date</label>
-  <input type="date" id="expiryDate" />
+  <label>Expiry Date
+    <input type="date" id="expiryDate" />
+  </label>
 
-  <label for="location">Location</label>
-  <select id="location">
-    <option value="Fridge (kitchen)">Fridge (kitchen)</option>
-    <option value="Fridge (dining room)">Fridge (dining room)</option>
-    <option value="Freezer (garage)">Freezer (garage)</option>
-    <option value="Freezer (dining room)">Freezer (dining room)</option>
-  </select>
+  <label>Location
+    <select id="location">
+      <option value="Fridge (kitchen)">Fridge (kitchen)</option>
+      <option value="Fridge (dining room)">Fridge (dining room)</option>
+      <option value="Freezer (garage)">Freezer (garage)</option>
+      <option value="Freezer (dining room)">Freezer (dining room)</option>
+    </select>
+  </label>
 
-  <label for="notes">Notes</label>
-  <input type="text" id="notes" placeholder="Optional notes" />
+  <label>Notes
+    <input type="text" id="notes" />
+  </label>
 
-  <button onclick="addItem()">Submit</button>
+  <button onclick="submitForm()">Submit</button>
 
   <script>
-    // Autofill today's date for purchaseDate
-    document.getElementById('purchaseDate').valueAsDate = new Date();
-
-    async function addItem() {
-      const item = document.getElementById("item").value.trim();
-      const barcode = document.getElementById("barcode").value.trim();
-      const quantity = parseInt(document.getElementById("quantity").value) || 1;
-      const unit = document.getElementById("unit").value.trim();
-      const purchaseDate = document.getElementById("purchaseDate").value;
-      const expiryDate = document.getElementById("expiryDate").value;
-      const location = document.getElementById("location").value;
-      const notes = document.getElementById("notes").value.trim();
-
-      if (!item) {
-        alert("Please enter the item name.");
-        return;
-      }
-
+    async function submitForm() {
       const payload = {
-        mode: "add",
-        item,
-        barcode,
-        quantity,
-        unit,
-        purchaseDate,
-        expiryDate,
-        location,
-        notes
+        mode: 'add',
+        item: document.getElementById('item').value.trim(),
+        barcode: document.getElementById('barcode').value.trim(),
+        quantity: document.getElementById('quantity').value,
+        unit: document.getElementById('unit').value.trim(),
+        purchaseDate: document.getElementById('purchaseDate').value,
+        expiryDate: document.getElementById('expiryDate').value,
+        location: document.getElementById('location').value,
+        notes: document.getElementById('notes').value.trim()
       };
 
       try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbyw911MYKuY9nM-CeaE_NtdcNewH0ohrK1NGzz0AGjbLp6E25mtA-33Ea4MU3938At5cw/exec", {
-          method: "POST",
-          body: JSON.stringify(payload),
+        const res = await fetch('https://script.google.com/macros/s/AKfycbyw911MYKuY9nM-CeaE_NtdcNewH0ohrK1NGzz0AGjbLp6E25mtA-33Ea4MU3938At5cw/exec', {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json"
-          }
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
         });
 
-        const result = await response.json();
+        const result = await res.json();
         if (result.success) {
-          alert("Item added!");
-          document.querySelectorAll("input").forEach(i => i.value = "");
-          document.getElementById("location").selectedIndex = 0;
-          document.getElementById('purchaseDate').valueAsDate = new Date();
+          alert('Item added successfully!');
+          document.querySelector('form')?.reset(); // Optional
         } else {
-          alert("Error: " + result.error);
+          alert('Error: ' + result.error);
         }
       } catch (err) {
-        alert("Error: " + err.message);
+        alert('Error: ' + err.message);
       }
     }
   </script>
