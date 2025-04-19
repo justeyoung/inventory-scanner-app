@@ -9,124 +9,114 @@
       font-family: sans-serif;
       padding: 20px;
     }
+    h2 {
+      margin-bottom: 10px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: 10px;
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 6px;
+      text-align: left;
     }
     th {
-      background-color: #f0f0f0;
+      background-color: #f2f2f2;
     }
-    td[contenteditable="true"] {
-      background-color: #fffce0;
+    td.editable {
+      background-color: #fffacd;
     }
-    .success {
-      background-color: #d4edda !important;
-    }
-    .save-button {
+    .save-btn {
       background-color: #4CAF50;
       color: white;
       border: none;
-      padding: 5px 10px;
+      padding: 6px 10px;
       cursor: pointer;
+    }
+    .save-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .flashing {
+      animation: flash 0.5s ease-in-out;
+    }
+    @keyframes flash {
+      0% { background-color: #d4edda; }
+      100% { background-color: #fff; }
     }
   </style>
 </head>
 <body>
   <h2>Inventory Viewer</h2>
-  <div id="inventoryContainer">Loading...</div>
+  <div id="inventoryTable">Loading...</div>
 
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
-    function formatDateForDisplay(dateStr) {
-      if (!dateStr) return "";
-      const date = new Date(dateStr);
-      if (isNaN(date)) return dateStr;
-      return date.toLocaleDateString("en-GB");
-    }
-
-    function formatDateForSheet(displayDate) {
-      const [dd, mm, yy] = displayDate.split("/");
-      return `${yy.length === 2 ? "20" + yy : yy}-${mm}-${dd}`;
-    }
-
     async function loadInventory() {
       const res = await fetch(scriptURL);
-      const data = await res.json();
-
-      const headers = data[0];
-      const rows = data.slice(1);
+      const rawData = await res.json();
+      const header = rawData[0];
+      const data = rawData.slice(1);
 
       let html = '<table><thead><tr>';
-      const viewHeaders = ['#', 'Item', 'Qty', 'Unit', 'Purchase Date', 'Expiry Date', 'Notes', 'Action'];
-      viewHeaders.forEach(h => html += `<th>${h}</th>`);
-      html += '</tr></thead><tbody>';
+      html += '<th>#</th>';
+      const fields = ["Item", "Qty", "Unit", "Purchase Date", "Expiry Date", "Notes"];
+      fields.forEach(f => html += `<th>${f}</th>`);
+      html += '<th>Action</th></tr></thead><tbody>';
 
-      rows.forEach((row, i) => {
-        const id = i + 2; // spreadsheet row index (1-based, skip header)
-        html += `<tr data-id="${id}">
-          <td>${i + 1}</td>
-          <td>${row[1]}</td>
-          <td contenteditable="true" class="editable" data-col="3">${row[3]}</td>
-          <td contenteditable="true" class="editable" data-col="4">${row[4]}</td>
-          <td contenteditable="true" class="editable" data-col="5">${formatDateForDisplay(row[5])}</td>
-          <td contenteditable="true" class="editable" data-col="6">${formatDateForDisplay(row[6])}</td>
-          <td contenteditable="true" class="editable" data-col="8">${row[8]}</td>
-          <td><button class="save-button" onclick="saveRow(this)">Save</button></td>
-        </tr>`;
+      data.forEach((row, i) => {
+        const rowId = row[0]; // ID
+        html += `<tr data-id="${rowId}">`;
+        html += `<td>${i + 1}</td>`;
+        html += `<td>${row[1]}</td>`; // Item
+        html += `<td contenteditable="true" class="editable" data-col="3">${row[3]}</td>`;
+        html += `<td contenteditable="true" class="editable" data-col="4">${row[4]}</td>`;
+        html += `<td contenteditable="true" class="editable" data-col="5">${row[5]}</td>`;
+        html += `<td contenteditable="true" class="editable" data-col="6">${row[6]}</td>`;
+        html += `<td contenteditable="true" class="editable" data-col="8">${row[8]}</td>`;
+        html += `<td><button class="save-btn">Save</button></td>`;
+        html += `</tr>`;
       });
 
       html += '</tbody></table>';
-      document.getElementById("inventoryContainer").innerHTML = html;
-    }
+      document.getElementById("inventoryTable").innerHTML = html;
 
-    async function saveRow(button) {
-      const tr = button.closest("tr");
-      const rowIndex = parseInt(tr.dataset.id);
+      document.querySelectorAll(".save-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const rowEl = btn.closest("tr");
+          const id = rowEl.dataset.id;
+          const updates = {
+            quantity: rowEl.querySelector('[data-col="3"]').innerText.trim(),
+            unit: rowEl.querySelector('[data-col="4"]').innerText.trim(),
+            purchaseDate: rowEl.querySelector('[data-col="5"]').innerText.trim(),
+            expiryDate: rowEl.querySelector('[data-col="6"]').innerText.trim(),
+            notes: rowEl.querySelector('[data-col="8"]').innerText.trim(),
+          };
 
-      const qty = tr.querySelector('[data-col="3"]').innerText.trim();
-      const unit = tr.querySelector('[data-col="4"]').innerText.trim();
-      const purchase = formatDateForSheet(tr.querySelector('[data-col="5"]').innerText.trim());
-      const expiry = formatDateForSheet(tr.querySelector('[data-col="6"]').innerText.trim());
-      const notes = tr.querySelector('[data-col="8"]').innerText.trim();
+          const payload = {
+            action: "updateRow",
+            id: id,
+            updates: updates
+          };
 
-      const updates = [
-        { col: 3, value: qty },
-        { col: 4, value: unit },
-        { col: 5, value: purchase },
-        { col: 6, value: expiry },
-        { col: 8, value: notes }
-      ];
+          const res = await fetch(scriptURL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
 
-      let allSuccess = true;
-
-      for (let update of updates) {
-        const res = await fetch(scriptURL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "update",
-            row: rowIndex,
-            col: update.col,
-            value: update.value
-          })
+          const result = await res.json();
+          if (result.success) {
+            rowEl.classList.add("flashing");
+            setTimeout(() => rowEl.classList.remove("flashing"), 500);
+          } else {
+            alert("Update failed: " + result.error);
+          }
         });
-
-        const result = await res.json();
-        if (!result.success) allSuccess = false;
-      }
-
-      if (allSuccess) {
-        tr.classList.add("success");
-        setTimeout(() => tr.classList.remove("success"), 1000);
-      } else {
-        alert("Update failed. Please check your connection or script.");
-      }
+      });
     }
 
     loadInventory();
