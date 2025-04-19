@@ -1,50 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Inventory Viewer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fridge Inventory</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
     }
-    h2 {
-      margin-bottom: 10px;
-    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 20px;
     }
     th, td {
       border: 1px solid #ccc;
       padding: 6px;
-      text-align: left;
     }
-    th {
-      background-color: #f2f2f2;
-    }
-    td.editable {
-      background-color: #fffacd;
-    }
-    .save-btn {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-    .save-btn:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
+    td[contenteditable="true"] {
+      background-color: #fffccd;
     }
     .flashing {
-      animation: flash 0.5s ease-in-out;
+      background-color: #d4edda !important;
     }
-    @keyframes flash {
-      0% { background-color: #d4edda; }
-      100% { background-color: #fff; }
+    .save-button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 4px 10px;
+      border: none;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -55,51 +40,50 @@
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
+    function formatDate(d) {
+      if (!d) return "";
+      const date = new Date(d);
+      return isNaN(date) ? d : date.toLocaleDateString("en-GB");
+    }
+
     async function loadInventory() {
       const res = await fetch(scriptURL);
-      const rawData = await res.json();
-      const header = rawData[0];
-      const data = rawData.slice(1);
+      const data = await res.json();
+      const header = data[0];
+      const rows = data.slice(1);
 
-      let html = '<table><thead><tr>';
-      html += '<th>#</th>';
-      const fields = ["Item", "Qty", "Unit", "Purchase Date", "Expiry Date", "Notes"];
-      fields.forEach(f => html += `<th>${f}</th>`);
-      html += '<th>Action</th></tr></thead><tbody>';
-
-      data.forEach((row, i) => {
-        const rowId = row[0]; // ID
-        html += `<tr data-id="${rowId}">`;
-        html += `<td>${i + 1}</td>`;
-        html += `<td>${row[1]}</td>`; // Item
-        html += `<td contenteditable="true" class="editable" data-col="3">${row[3]}</td>`;
-        html += `<td contenteditable="true" class="editable" data-col="4">${row[4]}</td>`;
-        html += `<td contenteditable="true" class="editable" data-col="5">${row[5]}</td>`;
-        html += `<td contenteditable="true" class="editable" data-col="6">${row[6]}</td>`;
-        html += `<td contenteditable="true" class="editable" data-col="8">${row[8]}</td>`;
-        html += `<td><button class="save-btn">Save</button></td>`;
-        html += `</tr>`;
+      let html = '<table><thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Unit</th><th>Purchase</th><th>Expiry</th><th>Notes</th><th></th></tr></thead><tbody>';
+      rows.forEach((row, i) => {
+        const id = new Date(row[0]).getTime();
+        html += `<tr data-id="${id}">
+          <td>${i + 1}</td>
+          <td>${row[1]}</td>
+          <td contenteditable="true" data-col="3">${row[3]}</td>
+          <td contenteditable="true" data-col="4">${row[4]}</td>
+          <td contenteditable="true" data-col="5">${formatDate(row[5])}</td>
+          <td contenteditable="true" data-col="6">${formatDate(row[6])}</td>
+          <td contenteditable="true" data-col="8">${row[8]}</td>
+          <td><button class="save-button">Save</button></td>
+        </tr>`;
       });
-
       html += '</tbody></table>';
       document.getElementById("inventoryTable").innerHTML = html;
 
-      document.querySelectorAll(".save-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const rowEl = btn.closest("tr");
-          const id = rowEl.dataset.id;
-          const updates = {
-            quantity: rowEl.querySelector('[data-col="3"]').innerText.trim(),
-            unit: rowEl.querySelector('[data-col="4"]').innerText.trim(),
-            purchaseDate: rowEl.querySelector('[data-col="5"]').innerText.trim(),
-            expiryDate: rowEl.querySelector('[data-col="6"]').innerText.trim(),
-            notes: rowEl.querySelector('[data-col="8"]').innerText.trim(),
-          };
+      document.querySelectorAll(".save-button").forEach(button => {
+        button.addEventListener("click", async () => {
+          const row = button.closest("tr");
+          const id = row.dataset.id;
 
           const payload = {
             action: "updateRow",
             id: id,
-            updates: updates
+            updates: {
+              quantity: row.querySelector('[data-col="3"]').innerText.trim(),
+              unit: row.querySelector('[data-col="4"]').innerText.trim(),
+              purchaseDate: row.querySelector('[data-col="5"]').innerText.trim(),
+              expiryDate: row.querySelector('[data-col="6"]').innerText.trim(),
+              notes: row.querySelector('[data-col="8"]').innerText.trim()
+            }
           };
 
           const res = await fetch(scriptURL, {
@@ -110,8 +94,8 @@
 
           const result = await res.json();
           if (result.success) {
-            rowEl.classList.add("flashing");
-            setTimeout(() => rowEl.classList.remove("flashing"), 500);
+            row.classList.add("flashing");
+            setTimeout(() => row.classList.remove("flashing"), 600);
           } else {
             alert("Update failed: " + result.error);
           }
