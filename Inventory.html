@@ -1,46 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
   <title>Inventory Viewer</title>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px;
-      text-align: left;
-    }
-
-    td[contenteditable="true"] {
-      background-color: #ffffcc;
-    }
-
-    .flashing {
-      background-color: #d4edda !important;
-    }
-
-    .save-button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 4px 10px;
-      border: none;
-      cursor: pointer;
-    }
-
-    .save-button:hover {
-      background-color: #45a049;
-    }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 6px; }
+    td[contenteditable="true"] { background: #ffffcc; }
+    .save-button { background: #4CAF50; color: white; padding: 4px 10px; border: none; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -48,20 +15,12 @@
   <div id="inventoryTable">Loading...</div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec"; // Replace this with your actual deployed Apps Script URL
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec"; // Paste your deployed Apps Script URL here
 
     function formatDate(dateStr) {
       if (!dateStr) return "";
       const date = new Date(dateStr);
       return isNaN(date) ? "" : date.toLocaleDateString("en-GB");
-    }
-
-    function flashCell(cell, success) {
-      const originalColor = cell.style.backgroundColor;
-      cell.style.backgroundColor = success ? "#d4edda" : "#f8d7da";
-      setTimeout(() => {
-        cell.style.backgroundColor = originalColor;
-      }, 800);
     }
 
     async function loadInventory() {
@@ -71,30 +30,23 @@
       const rows = data.slice(1);
 
       let html = `<table><thead><tr>
-        <th>#</th>
-        <th>Item</th>
-        <th>Qty</th>
-        <th>Unit</th>
-        <th>Purchase</th>
-        <th>Expiry</th>
-        <th>Notes</th>
-        <th>Action</th>
+        <th>#</th><th>Item</th><th>Qty</th><th>Unit</th><th>Purchase</th><th>Expiry</th><th>Notes</th><th>Action</th>
       </tr></thead><tbody>`;
 
-      rows.forEach((row, index) => {
-        html += `<tr data-id="${index + 2}">`;
-        html += `<td>${index + 1}</td>`;
-        html += `<td>${row[1]}</td>`; // Item
-        html += `<td contenteditable="true" data-col="4">${row[3]}</td>`; // Qty (column D)
-        html += `<td contenteditable="true" data-col="5">${row[4]}</td>`; // Unit (column E)
-        html += `<td contenteditable="true" data-col="6">${formatDate(row[5])}</td>`; // Purchase (F)
-        html += `<td contenteditable="true" data-col="7">${formatDate(row[6])}</td>`; // Expiry (G)
-        html += `<td contenteditable="true" data-col="9">${row[8] || ""}</td>`; // Notes (I = col 9)
-        html += `<td><button class="save-button">Save</button></td>`;
-        html += `</tr>`;
+      rows.forEach((row, i) => {
+        html += `<tr data-id="${i + 2}">
+          <td>${i + 1}</td>
+          <td>${row[1]}</td>
+          <td contenteditable="true" data-col="4">${row[3]}</td>
+          <td contenteditable="true" data-col="5">${row[4]}</td>
+          <td contenteditable="true" data-col="6">${formatDate(row[5])}</td>
+          <td contenteditable="true" data-col="7">${formatDate(row[6])}</td>
+          <td contenteditable="true" data-col="9">${row[8] || ""}</td>
+          <td><button class="save-button">Save</button></td>
+        </tr>`;
       });
 
-      html += `</tbody></table>`;
+      html += "</tbody></table>";
       document.getElementById("inventoryTable").innerHTML = html;
 
       document.querySelectorAll(".save-button").forEach(button => {
@@ -106,7 +58,6 @@
           for (const cell of cells) {
             const col = cell.dataset.col;
             const value = cell.innerText.trim();
-
             const payload = {
               action: "update",
               row: parseInt(rowId),
@@ -117,15 +68,15 @@
             try {
               const res = await fetch(scriptURL, {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
               });
               const result = await res.json();
-              flashCell(cell, result.success);
+              cell.style.backgroundColor = result.success ? "#d4edda" : "#f8d7da";
+              setTimeout(() => cell.style.backgroundColor = "", 800);
             } catch (err) {
-              flashCell(cell, false);
+              cell.style.backgroundColor = "#f8d7da";
+              setTimeout(() => cell.style.backgroundColor = "", 800);
             }
           }
         });
