@@ -30,6 +30,12 @@
     .updated {
       background-color: #d4edda !important;
     }
+    .expired {
+      background-color: #ffe6e6;
+    }
+    .soon {
+      background-color: #fff5cc;
+    }
     .location-group {
       margin-bottom: 40px;
     }
@@ -52,7 +58,7 @@
   <h2>Inventory Viewer</h2>
 
   <div class="filter-controls">
-    <input id="searchInput" type="text" placeholder="Search items, units, or notes..." oninput="renderTable()" />
+    <input id="searchInput" type="text" placeholder="Search..." oninput="renderTable()" />
     <select id="locationFilter" onchange="renderTable()">
       <option value="">All Locations</option>
       <option value="Freezer (garage)">Freezer (garage)</option>
@@ -60,6 +66,11 @@
       <option value="Fridge (dining room)">Fridge (dining room)</option>
       <option value="Fridge (kitchen)">Fridge (kitchen)</option>
       <option value="Unspecified">Unspecified</option>
+    </select>
+    <select id="expiryFilter" onchange="renderTable()">
+      <option value="">All Expiries</option>
+      <option value="expired">Expired</option>
+      <option value="soon">Expiring Soon</option>
     </select>
     <button onclick="clearFilters()">Show all</button>
   </div>
@@ -77,6 +88,17 @@
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = String(d.getFullYear()).slice(-2);
       return `${day}/${month}/${year}`;
+    }
+
+    function classifyExpiry(expiryDate) {
+      if (!expiryDate) return "";
+      const today = new Date();
+      const expiry = new Date(expiryDate);
+      if (isNaN(expiry)) return "";
+      const diff = (expiry - today) / (1000 * 60 * 60 * 24);
+      if (diff < 0) return "expired";
+      if (diff <= 3) return "soon";
+      return "";
     }
 
     async function loadInventory() {
@@ -99,6 +121,7 @@
     function clearFilters() {
       document.getElementById('searchInput').value = '';
       document.getElementById('locationFilter').value = '';
+      document.getElementById('expiryFilter').value = '';
       renderTable();
     }
 
@@ -107,15 +130,20 @@
       container.innerHTML = '';
       const searchTerm = document.getElementById('searchInput').value.toLowerCase();
       const locationFilter = document.getElementById('locationFilter').value;
+      const expiryFilter = document.getElementById('expiryFilter').value;
 
-      const filtered = inventoryData.filter(item =>
-        (!locationFilter || item.location === locationFilter) &&
-        (
-          item.item?.toLowerCase().includes(searchTerm) ||
-          item.unit?.toLowerCase().includes(searchTerm) ||
-          item.notes?.toLowerCase().includes(searchTerm)
-        )
-      );
+      const filtered = inventoryData.filter(item => {
+        const expiryStatus = classifyExpiry(item.expiryDate);
+        return (
+          (!locationFilter || item.location === locationFilter) &&
+          (!expiryFilter || expiryFilter === expiryStatus) &&
+          (
+            item.item?.toLowerCase().includes(searchTerm) ||
+            item.unit?.toLowerCase().includes(searchTerm) ||
+            item.notes?.toLowerCase().includes(searchTerm)
+          )
+        );
+      });
 
       const grouped = {};
       filtered.forEach(entry => {
@@ -157,7 +185,9 @@
             ['expiryDate', true],
             ['notes', true]
           ].forEach(([key, editable]) => {
-            const td = cell(key === 'purchaseDate' ? formatShortDate(entry[key]) : entry[key], editable);
+            let val = entry[key];
+            if (key === 'purchaseDate' || key === 'expiryDate') val = formatShortDate(val);
+            const td = cell(val, editable);
             if (editable) {
               td.dataset.rowIndex = entry.rowIndex;
               td.dataset.columnName = key;
@@ -168,6 +198,10 @@
                   td.blur();
                 }
               });
+            }
+            if (key === 'expiryDate') {
+              const status = classifyExpiry(entry.expiryDate);
+              if (status) td.classList.add(status);
             }
             tr.appendChild(td);
           });
