@@ -1,107 +1,92 @@
-let selectedMode = 'add';
-let currentStream;
+const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
-function setMode(mode) {
-  selectedMode = mode;
-  document.getElementById("modeAdd").classList.remove("active");
-  document.getElementById("modeRemove").classList.remove("active");
-  document.getElementById("mode" + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add("active");
-
-  if (selectedMode === 'remove') {
-    document.getElementById("video").classList.add("hidden");
-  } else {
-    document.getElementById("video").classList.remove("hidden");
-    startCamera();
-  }
-
-  resetForm();
+// Highlight update result
+function flashCell(cell, success) {
+  const originalColor = cell.style.backgroundColor;
+  cell.style.backgroundColor = success ? "#d4edda" : "#f8d7da";
+  setTimeout(() => {
+    cell.style.backgroundColor = originalColor;
+  }, 800);
 }
 
-function resetForm() {
-  document.getElementById("itemName").value = "";
-  document.getElementById("quantity").value = "1";
-  document.getElementById("unit").value = "";
-  document.getElementById("purchaseDate").valueAsDate = new Date();
-  document.getElementById("expiryDate").value = "";
-  document.getElementById("notes").value = "";
+// Format date as dd/mm/yy
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return isNaN(date) ? "" : date.toLocaleDateString("en-GB");
 }
 
-function submitData() {
-  const itemName = document.getElementById("itemName").value.trim();
-  const quantity = document.getElementById("quantity").value.trim() || "1";
-  const unit = document.getElementById("unit").value.trim();
-  const purchaseDate = document.getElementById("purchaseDate").value;
-  const expiryDate = document.getElementById("expiryDate").value;
-  const location = document.getElementById("location").value;
-  const notes = document.getElementById("notes").value.trim();
+// Load and render inventory
+async function loadInventory() {
+  const res = await fetch(scriptURL);
+  const rawData = await res.json();
 
-  if (!itemName) {
-    alert("Please enter an item name.");
-    return;
-  }
+  const header = rawData[0];
+  const data = rawData.slice(1);
 
-  if (selectedMode === "remove") {
-    const confirmed = confirm(`Are you sure you want to remove "${itemName}" from your inventory?`);
-    if (!confirmed) return;
-  }
+  const grouped = {};
+  data.forEach((row, index) => {
+    const location = row[7] || "Unspecified";
+    if (!grouped[location]) grouped[location] = [];
+    grouped[location].push([index + 1, ...row]);
+  });
 
-  const payload = {
-    action: selectedMode === "add" ? "addItem" : "removeItem",
-    itemName,
-    quantity,
-    unit,
-    purchaseDate,
-    expiryDate,
-    location,
-    notes
-  };
-
-  fetch("https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  })
-    .then(res => res.json())
-    .then(response => {
-      if (response.success) {
-        alert("Item submitted!");
-        resetForm();
-      } else {
-        alert("Failed to submit item.");
-      }
-    })
-    .catch(err => {
-      console.error("Error:", err);
-      alert("Error submitting item.");
+  let html = "";
+  for (const location in grouped) {
+    html += `<h3 class="location-title">${location}</h3>`;
+    html += `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Purchase Date</th>
+            <th>Expiry Date</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    grouped[location].forEach((row, i) => {
+      html += `<tr data-row="${row[1]}">`;
+      html += `<td>${i + 1}</td>`;
+      html += `<td>${row[2]}</td>`;
+      html += `<td contenteditable="true" data-col="3">${row[3]}</td>`;
+      html += `<td contenteditable="true" data-col="4">${row[4]}</td>`;
+      html += `<td contenteditable="true" data-col="5">${formatDate(row[5])}</td>`;
+      html += `<td contenteditable="true" data-col="6">${formatDate(row[6])}</td>`;
+      html += `<td contenteditable="true" data-col="8">${row[8] || ""}</td>`;
+      html += `</tr>`;
     });
-}
+    html += "</tbody></table>";
+  }
 
-function startCamera() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  document.getElementById("inventoryTable").innerHTML = html;
 
-  const video = document.getElementById("video");
+  document.querySelectorAll("td[contenteditable='true']").forEach(cell => {
+    cell.addEventListener("blur", async () => {
+      const row = cell.closest("tr").dataset.row;
+      const col = cell.dataset.col;
+      const value = cell.innerText.trim();
 
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-    .then(stream => {
-      currentStream = stream;
-      video.srcObject = stream;
-      video.setAttribute("playsinline", true);
-      video.play();
-
-      const codeReader = new ZXing.BrowserBarcodeReader();
-      codeReader.decodeFromVideoDevice(null, video, result => {
-        if (result) {
-          const barcode = result.text;
-          fetchProductFromBarcode(barcode);
-        }
+      const response = await fetch(scriptURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          row: parseInt(row),
+          col: parseInt(col),
+          value: value
+        })
       });
-    })
-    .catch(err => {
-      console.error("Camera error:", err);
+
+      const result = await response.json();
+      flashCell(cell, result.success);
     });
+  });
 }
 
-function fetchProductFromBarcode(barcode) {
-  // Replace with actual barcode lookup or manually add logic
-  console.log("Scanned barcode:", barcode);
-  document.getElementById("itemName").value = "";
-}
+// Kick things off
+loadInventory();
