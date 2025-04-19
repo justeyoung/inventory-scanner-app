@@ -10,6 +10,10 @@
       padding: 20px;
     }
 
+    h2 {
+      margin-bottom: 10px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -84,12 +88,12 @@
       rows.forEach((row, index) => {
         html += `<tr data-id="${index + 2}">`;
         html += `<td>${index + 1}</td>`;
-        html += `<td>${row[1]}</td>`; // Item
-        html += `<td contenteditable="true" data-col="3">${row[2]}</td>`; // Qty
-        html += `<td contenteditable="true" data-col="4">${row[3]}</td>`; // Unit
-        html += `<td contenteditable="true" data-col="5">${formatDate(row[4])}</td>`; // Purchase
-        html += `<td contenteditable="true" data-col="6">${formatDate(row[5])}</td>`; // Expiry
-        html += `<td contenteditable="true" data-col="7">${row[6] || ""}</td>`; // Notes
+        html += `<td>${row[1]}</td>`;                      // Item (column B)
+        html += `<td contenteditable="true" data-col="4">${row[3]}</td>`; // Quantity (column D = index 4)
+        html += `<td contenteditable="true" data-col="5">${row[4]}</td>`; // Unit (column E = index 5)
+        html += `<td contenteditable="true" data-col="6">${formatDate(row[5])}</td>`; // Purchase Date (F = 6)
+        html += `<td contenteditable="true" data-col="7">${formatDate(row[6])}</td>`; // Expiry Date (G = 7)
+        html += `<td contenteditable="true" data-col="9">${row[8] || ""}</td>`; // Notes (I = 9)
         html += `<td><button class="save-button">Save</button></td>`;
         html += `</tr>`;
       });
