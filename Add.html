@@ -1,73 +1,46 @@
-<!DOCTYPE html>
-
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Add Inventory Item</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 500px;
-      margin: 2rem;
-    }
-    label {
-      margin-top: 1rem;
-      display: block;
-    }
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-    }
-    button {
-      margin-top: 1.5rem;
-      padding: 10px 20px;
-      font-size: 16px;
-    }
-  </style>
-</head>
 <body>
   <h2>Add Inventory Item</h2>
 
-  <label>Item Name
-    <input type="text" id="item" required />
-  </label>
+  <form id="addForm">
+    <label>Item Name
+      <input type="text" id="item" required />
+    </label>
 
-  <label>Barcode (optional)
-    <input type="text" id="barcode" />
-  </label>
+    <label>Barcode (optional)
+      <input type="text" id="barcode" />
+    </label>
 
-  <label>Quantity
-    <input type="number" id="quantity" value="1" />
-  </label>
+    <label>Quantity
+      <input type="number" id="quantity" value="1" />
+    </label>
 
-  <label>Unit
-    <input type="text" id="unit" placeholder="e.g. pcs, g, ml" />
-  </label>
+    <label>Unit
+      <input type="text" id="unit" placeholder="e.g. pcs, g, ml" />
+    </label>
 
-  <label>Purchase Date
-    <input type="date" id="purchaseDate" />
-  </label>
+    <label>Purchase Date
+      <input type="date" id="purchaseDate" />
+    </label>
 
-  <label>Expiry Date
-    <input type="date" id="expiryDate" />
-  </label>
+    <label>Expiry Date
+      <input type="date" id="expiryDate" />
+    </label>
 
-  <label>Location
-    <select id="location">
-      <option value="Fridge (kitchen)">Fridge (kitchen)</option>
-      <option value="Fridge (dining room)">Fridge (dining room)</option>
-      <option value="Freezer (garage)">Freezer (garage)</option>
-      <option value="Freezer (dining room)">Freezer (dining room)</option>
-    </select>
-  </label>
+    <label>Location
+      <select id="location">
+        <option value="Fridge (kitchen)">Fridge (kitchen)</option>
+        <option value="Fridge (dining room)">Fridge (dining room)</option>
+        <option value="Freezer (garage)">Freezer (garage)</option>
+        <option value="Freezer (dining room)">Freezer (dining room)</option>
+      </select>
+    </label>
 
-  <label>Notes
-    <input type="text" id="notes" />
-  </label>
+    <label>Notes
+      <input type="text" id="notes" />
+    </label>
 
-  <button onclick="submitForm()">Submit</button>
+    <button type="button" onclick="submitForm()">Submit</button>
+  </form>
 
   <script>
     async function submitForm() {
@@ -95,7 +68,7 @@
         const result = await res.json();
         if (result.success) {
           alert('Item added successfully!');
-          document.querySelector('form')?.reset(); // Optional
+          document.getElementById('addForm').reset(); // Now this works!
         } else {
           alert('Error: ' + result.error);
         }
@@ -105,4 +78,3 @@
     }
   </script>
 </body>
-</html>
