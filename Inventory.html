@@ -46,27 +46,22 @@
       background-color: #f9f9f9;
     }
 
+    input[type="text"], input[type="number"], input[type="date"] {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    .highlight {
+      background-color: #d4edda !important;
+    }
+
     .back-link {
       margin-bottom: 15px;
       display: inline-block;
       text-decoration: none;
       color: #4CAF50;
       font-weight: bold;
-    }
-
-    select, input[type="text"], button {
-      margin: 10px 0 15px;
-      padding: 8px;
-      font-size: 16px;
-      border: 2px solid #ccc;
-      border-radius: 4px;
-      width: 100%;
-    }
-
-    .download-selected-btn {
-      background-color: #4CAF50;
-      color: white;
-      cursor: pointer;
     }
 
     .hidden {
@@ -99,11 +94,17 @@
     <option value="all">All locations</option>
   </select>
 
-  <button class="download-selected-btn" id="downloadSelectedBtn" disabled>Download PDF for Selected Location</button>
-
   <div id="groupedTables"></div>
 
   <script>
+    const editableCols = {
+      2: "Quantity",
+      5: "Expiry Date",
+      6: "Notes"
+    };
+
+    let sectionMap = {};
+
     function formatDate(dateStr) {
       if (!dateStr) return "";
       const date = new Date(dateStr);
@@ -126,21 +127,19 @@
     }
 
     let allSections = [];
-    let sectionMap = {};
-
-    const locationSelect = document.getElementById("locationSelect");
-    const container = document.getElementById("groupedTables");
 
     fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec')
       .then(response => response.json())
       .then(data => {
         const grouped = {};
-        data.slice(1).forEach(row => {
+        data.slice(1).forEach((row, idx) => {
           const location = row[7] || "Unspecified";
           if (!grouped[location]) grouped[location] = [];
-          grouped[location].push(row);
+          grouped[location].push({ row, rowIndex: idx + 2 }); // store Google Sheet row index
         });
 
+        const locationSelect = document.getElementById("locationSelect");
+        const container = document.getElementById("groupedTables");
         container.innerHTML = "";
 
         Object.keys(grouped).sort().forEach(location => {
@@ -170,7 +169,10 @@
           table.appendChild(thead);
 
           const tbody = document.createElement("tbody");
-          grouped[location].forEach((row, index) => {
+
+          grouped[location].forEach((entry, index) => {
+            const row = entry.row;
+            const rowIndex = entry.rowIndex;
             const tr = document.createElement("tr");
 
             const indices = [1, 3, 4, 5, 6, 8];
@@ -180,7 +182,7 @@
             serialTd.textContent = index + 1;
             tr.appendChild(serialTd);
 
-            indices.forEach(i => {
+            indices.forEach((i, colIndex) => {
               const td = document.createElement("td");
               let value = (i === 5 || i === 6) ? formatDate(row[i]) : row[i];
               if (i === 6) {
@@ -189,6 +191,18 @@
                 else if (status === "soon") td.classList.add("expiring-soon");
                 tr.setAttribute("data-expiry", status);
               }
+
+              if (editableCols[colIndex + 1]) {
+                td.setAttribute("contenteditable", true);
+                td.addEventListener("blur", () => handleEdit(td, rowIndex, editableCols[colIndex + 1]));
+                td.addEventListener("keydown", (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    td.blur();
+                  }
+                });
+              }
+
               td.textContent = value;
               tr.appendChild(td);
               searchValues.push((value || "").toString().toLowerCase());
@@ -204,13 +218,7 @@
         });
 
         locationSelect.disabled = false;
-        document.getElementById("downloadSelectedBtn").disabled = false;
-
         applyFilters();
-      })
-      .catch(error => {
-        alert("Failed to load inventory data.");
-        console.error("Fetch error:", error);
       });
 
     function applyFilters() {
@@ -244,49 +252,30 @@
 
     document.getElementById("searchBox").addEventListener("input", applyFilters);
     document.getElementById("expiryFilter").addEventListener("change", applyFilters);
-    locationSelect.addEventListener("change", applyFilters);
+    document.getElementById("locationSelect").addEventListener("change", applyFilters);
 
-    document.getElementById("downloadSelectedBtn").addEventListener("click", () => {
-      const selectedLocation = locationSelect.value;
-      if (!selectedLocation || selectedLocation === "all") {
-        alert("Please select a location first.");
-        return;
-      }
+    function handleEdit(cell, rowIndex, columnName) {
+      const newValue = cell.textContent.trim();
+      cell.classList.remove("highlight");
 
-      const section = sectionMap[selectedLocation];
-      const table = section.querySelector("table");
-      const heading = section.querySelector("h3");
-
-      const visibleRows = table.querySelectorAll("tbody tr:not(.hidden)");
-      if (visibleRows.length === 0) {
-        alert("No visible rows to export for this location.");
-        return;
-      }
-
-      const pdfWrapper = document.createElement("div");
-      const pdfTitle = document.createElement("h3");
-      pdfTitle.textContent = selectedLocation;
-      pdfWrapper.appendChild(pdfTitle);
-
-      const exportTable = document.createElement("table");
-      exportTable.innerHTML = table.querySelector("thead").outerHTML;
-      const exportTbody = document.createElement("tbody");
-
-      visibleRows.forEach(row => {
-        exportTbody.appendChild(row.cloneNode(true));
-      });
-
-      exportTable.appendChild(exportTbody);
-      pdfWrapper.appendChild(exportTable);
-
-      html2pdf().set({
-        margin: 0.5,
-        filename: `${selectedLocation.replace(/\s+/g, "_")}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      }).from(pdfWrapper).save();
-    });
+      fetch('https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: "update",
+          rowIndex,
+          columnName,
+          newValue
+        })
+      }).then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            cell.classList.add("highlight");
+            setTimeout(() => cell.classList.remove("highlight"), 1000);
+          } else {
+            alert("Failed to update. Try again.");
+          }
+        });
+    }
   </script>
 </body>
 </html>
