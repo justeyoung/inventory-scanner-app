@@ -1,35 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fridge Inventory</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory Viewer</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
     }
+
     th, td {
       border: 1px solid #ccc;
       padding: 6px;
+      text-align: left;
     }
+
     td[contenteditable="true"] {
-      background-color: #fffccd;
+      background-color: #ffffcc;
     }
+
     .flashing {
       background-color: #d4edda !important;
     }
+
     .save-button {
       background-color: #4CAF50;
       color: white;
       padding: 4px 10px;
       border: none;
       cursor: pointer;
+    }
+
+    .save-button:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
@@ -40,10 +50,18 @@
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbzU-hHQz3SiqivqTlSwsDX1NaDaKHSpzujWbxGMj6q9C1WP9AkJtTTtNZaklw1nTmTVBA/exec";
 
-    function formatDate(d) {
-      if (!d) return "";
-      const date = new Date(d);
-      return isNaN(date) ? d : date.toLocaleDateString("en-GB");
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      return isNaN(date) ? "" : date.toLocaleDateString("en-GB");
+    }
+
+    function flashCell(cell, success) {
+      const originalColor = cell.style.backgroundColor;
+      cell.style.backgroundColor = success ? "#d4edda" : "#f8d7da";
+      setTimeout(() => {
+        cell.style.backgroundColor = originalColor;
+      }, 800);
     }
 
     async function loadInventory() {
@@ -52,52 +70,64 @@
       const header = data[0];
       const rows = data.slice(1);
 
-      let html = '<table><thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Unit</th><th>Purchase</th><th>Expiry</th><th>Notes</th><th></th></tr></thead><tbody>';
-      rows.forEach((row, i) => {
-        const id = new Date(row[0]).getTime();
-        html += `<tr data-id="${id}">
-          <td>${i + 1}</td>
-          <td>${row[1]}</td>
-          <td contenteditable="true" data-col="3">${row[3]}</td>
-          <td contenteditable="true" data-col="4">${row[4]}</td>
-          <td contenteditable="true" data-col="5">${formatDate(row[5])}</td>
-          <td contenteditable="true" data-col="6">${formatDate(row[6])}</td>
-          <td contenteditable="true" data-col="8">${row[8]}</td>
-          <td><button class="save-button">Save</button></td>
-        </tr>`;
+      let html = `<table><thead><tr>
+        <th>#</th>
+        <th>Item</th>
+        <th>Qty</th>
+        <th>Unit</th>
+        <th>Purchase</th>
+        <th>Expiry</th>
+        <th>Notes</th>
+        <th>Action</th>
+      </tr></thead><tbody>`;
+
+      rows.forEach((row, index) => {
+        html += `<tr data-id="${index + 2}">`;
+        html += `<td>${index + 1}</td>`;
+        html += `<td>${row[1]}</td>`; // Item
+        html += `<td contenteditable="true" data-col="3">${row[2]}</td>`; // Qty
+        html += `<td contenteditable="true" data-col="4">${row[3]}</td>`; // Unit
+        html += `<td contenteditable="true" data-col="5">${formatDate(row[4])}</td>`; // Purchase
+        html += `<td contenteditable="true" data-col="6">${formatDate(row[5])}</td>`; // Expiry
+        html += `<td contenteditable="true" data-col="7">${row[6] || ""}</td>`; // Notes
+        html += `<td><button class="save-button">Save</button></td>`;
+        html += `</tr>`;
       });
-      html += '</tbody></table>';
+
+      html += `</tbody></table>`;
       document.getElementById("inventoryTable").innerHTML = html;
 
+      // Add Save button logic
       document.querySelectorAll(".save-button").forEach(button => {
         button.addEventListener("click", async () => {
           const row = button.closest("tr");
-          const id = row.dataset.id;
+          const rowId = row.dataset.id;
+          const cells = row.querySelectorAll("td[contenteditable='true']");
 
-          const payload = {
-            action: "updateRow",
-            id: id,
-            updates: {
-              quantity: row.querySelector('[data-col="3"]').innerText.trim(),
-              unit: row.querySelector('[data-col="4"]').innerText.trim(),
-              purchaseDate: row.querySelector('[data-col="5"]').innerText.trim(),
-              expiryDate: row.querySelector('[data-col="6"]').innerText.trim(),
-              notes: row.querySelector('[data-col="8"]').innerText.trim()
+          for (const cell of cells) {
+            const col = cell.dataset.col;
+            const value = cell.innerText.trim();
+
+            const payload = {
+              action: "update",
+              row: parseInt(rowId),
+              col: parseInt(col),
+              value: value
+            };
+
+            try {
+              const res = await fetch(scriptURL, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+              });
+              const result = await res.json();
+              flashCell(cell, result.success);
+            } catch (err) {
+              flashCell(cell, false);
             }
-          };
-
-          const res = await fetch(scriptURL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-
-          const result = await res.json();
-          if (result.success) {
-            row.classList.add("flashing");
-            setTimeout(() => row.classList.remove("flashing"), 600);
-          } else {
-            alert("Update failed: " + result.error);
           }
         });
       });
