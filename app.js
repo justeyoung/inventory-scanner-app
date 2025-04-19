@@ -12,10 +12,8 @@ codeReader
       console.log("Scanned barcode:", code);
       lastScannedBarcode = code;
 
-      // Set default quantity to 1
       document.getElementById('quantity').value = "1";
-
-      lookupProductName(code); // Lookup name in all modes
+      lookupProductName(code);
     }
   })
   .catch(err => {
@@ -48,10 +46,20 @@ function lookupProductName(barcode) {
     });
 }
 
-// Submit data based on mode
+// Auto-fill quantity = 1 on manual typing (only once)
+let quantityTouched = false;
+itemNameEl.addEventListener("input", () => {
+  const quantityInput = document.getElementById('quantity');
+  if (!quantityTouched && quantityInput.value === "") {
+    quantityInput.value = "1";
+    quantityTouched = true;
+  }
+});
+
+// Submit data
 function submitData() {
-  if (!lastScannedBarcode) {
-    alert("Please scan a barcode first.");
+  if (!lastScannedBarcode && document.getElementById('itemName').value.trim() === "") {
+    alert("Please scan a barcode or enter an item name.");
     return;
   }
 
@@ -98,6 +106,7 @@ function resetForm() {
   document.getElementById('expiryDate').value = "";
   document.getElementById('location').value = "";
   document.getElementById('notes').value = "";
+  quantityTouched = false;
   itemNameEl.focus();
 }
 
@@ -131,7 +140,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setDefaultDate();
 });
 
-// Toggle between add/remove mode
+// Toggle mode
 function setMode(mode) {
   currentMode = mode;
   document.getElementById('modeAdd').classList.remove('active');
